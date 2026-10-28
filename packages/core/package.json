@@ -1,0 +1,47 @@
+{
+  "name": "@uni-helper/desktop",
+  "type": "module",
+  "version": "0.0.0",
+  "description": "SDK-configured Electron build and packaging for uni-app desktop apps",
+  "author": "FliPPeDround <flippedround@qq.com>",
+  "license": "MIT",
+  "funding": "https://afdian.com/a/flippedround",
+  "homepage": "https://github.com/uni-helper/desktop/tree/main/packages/core#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uni-helper/desktop.git",
+    "directory": "packages/core"
+  },
+  "bugs": "https://github.com/uni-helper/desktop/issues",
+  "keywords": [
+    "uni-app",
+    "electron",
+    "desktop",
+    "packaging",
+    "uni-helper"
+  ],
+  "sideEffects": false,
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./package.json": "./package.json"
+  },
+  "types": "./dist/index.d.mts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown && node scripts/copy-templates.mjs",
+    "dev": "tsdown --watch",
+    "knip": "knip",
+    "test": "pnpm run build && vitest run",
+    "typecheck": "tsc"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsdown": "catalog:cli",
+    "tsdown-stale-guard": "catalog:testing",
+    "tsnapi": "catalog:testing",
+    "typescript": "catalog:cli",
+    "vitest": "catalog:testing"
+  }
+}

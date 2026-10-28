@@ -1,0 +1,42 @@
+{
+  "name": "@uni-helper/desktop-cli",
+  "type": "module",
+  "version": "0.0.0",
+  "description": "CLI for @uni-helper/desktop to develop, build and package uni-app desktop apps",
+  "author": "FliPPeDround <flippedround@qq.com>",
+  "license": "MIT",
+  "funding": "https://afdian.com/a/flippedround",
+  "homepage": "https://github.com/uni-helper/desktop/tree/main/packages/cli#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uni-helper/desktop.git",
+    "directory": "packages/cli"
+  },
+  "bugs": "https://github.com/uni-helper/desktop/issues",
+  "keywords": [
+    "uni-app",
+    "electron",
+    "desktop",
+    "cli",
+    "uni-helper"
+  ],
+  "bin": {
+    "uni-desktop": "./dist/index.mjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "knip": "knip",
+    "test": "vitest run",
+    "typecheck": "tsc"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsdown": "catalog:cli",
+    "typescript": "catalog:cli",
+    "vitest": "catalog:testing"
+  }
+}
