@@ -1,1 +1,3 @@
-export {}
+import { installDesktopShim } from './install'
+
+installDesktopShim()
