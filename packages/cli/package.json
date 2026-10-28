@@ -33,6 +33,10 @@
     "test": "vitest run",
     "typecheck": "tsc"
   },
+  "dependencies": {
+    "@uni-helper/desktop": "workspace:*",
+    "cac": "catalog:cli"
+  },
   "devDependencies": {
     "@types/node": "catalog:types",
     "tsdown": "catalog:cli",

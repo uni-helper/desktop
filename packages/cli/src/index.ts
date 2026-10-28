@@ -1,1 +1,3 @@
-export {}
+import { createCli } from './cli'
+
+createCli().parse()

@@ -35,6 +35,7 @@ catalogs:
   cli:
     '@antfu/eslint-config': ^9.5.1
     bumpp: ^12.3.0
+    cac: ^7.1.0
     eslint: ^10.11.0
     eslint-plugin-slop: ^0.1.3
     eslint-plugin-sonarjs: ^4.2.2

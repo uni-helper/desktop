@@ -184,6 +184,9 @@ catalogs:
     bumpp:
       specifier: ^12.3.0
       version: 12.3.0
+    cac:
+      specifier: ^7.1.0
+      version: 7.1.0
     eslint:
       specifier: ^10.11.0
       version: 10.12.0
@@ -278,6 +281,13 @@ importers:
         version: 21.3.0
 
   packages/cli:
+    dependencies:
+      '@uni-helper/desktop':
+        specifier: workspace:*
+        version: link:../core
+      cac:
+        specifier: catalog:cli
+        version: 7.1.0
     devDependencies:
       '@types/node':
         specifier: catalog:types
