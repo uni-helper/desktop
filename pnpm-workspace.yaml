@@ -20,14 +20,18 @@ packages:
   - examples/*
 
 allowBuilds:
-  esbuild: true
   electron: true
+  electron-winstaller: true
+  esbuild: true
   simple-git-hooks: true
 
 catalogs:
   agentic:
     '@antfu/skills': ^0.1.0
     skills: ^1.7.2
+  build:
+    esbuild: ^0.28.0
+    unconfig: ^7.5.0
   cli:
     '@antfu/eslint-config': ^9.5.1
     bumpp: ^12.3.0
@@ -40,6 +44,10 @@ catalogs:
     taze: ^21.2.0
     tsdown: ^0.23.0
     typescript: ^6.0.3
+  desktop:
+    electron: ^45.0.0
+    electron-builder: ^26.18.0
+    electron-updater: ^6.8.11
   testing:
     happy-dom: ^21.0.4
     tsdown-stale-guard: ^0.1.3

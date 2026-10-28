@@ -23,6 +23,7 @@
   "sideEffects": false,
   "exports": {
     ".": "./dist/index.mjs",
+    "./main": "./dist/main.mjs",
     "./package.json": "./package.json"
   },
   "types": "./dist/index.d.mts",
@@ -36,8 +37,32 @@
     "test": "pnpm run build && vitest run",
     "typecheck": "tsc"
   },
+  "peerDependencies": {
+    "electron": ">=20",
+    "electron-builder": ">=24",
+    "electron-updater": ">=6"
+  },
+  "peerDependenciesMeta": {
+    "electron": {
+      "optional": true
+    },
+    "electron-builder": {
+      "optional": true
+    },
+    "electron-updater": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@uni-helper/desktop-shim": "workspace:*",
+    "esbuild": "catalog:build",
+    "unconfig": "catalog:build"
+  },
   "devDependencies": {
     "@types/node": "catalog:types",
+    "electron": "catalog:desktop",
+    "electron-builder": "catalog:desktop",
+    "electron-updater": "catalog:desktop",
     "tsdown": "catalog:cli",
     "tsdown-stale-guard": "catalog:testing",
     "tsnapi": "catalog:testing",

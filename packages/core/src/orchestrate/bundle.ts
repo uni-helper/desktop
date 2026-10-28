@@ -1,0 +1,82 @@
+import { build, context } from 'esbuild'
+import { join } from 'node:path'
+import type { BuildContext, Plugin } from 'esbuild'
+import type { BakedDesktopConfig } from '../baked'
+import { logWarn } from '../log'
+
+const ELECTRON_EXTERNALS = ['electron', 'electron-updater']
+
+export interface BundleEntryOptions {
+  /** Absolute path to the main process entry (template or custom) */
+  entryPath: string
+  /** Directory receiving `main.cjs` */
+  outDir: string
+  baked: BakedDesktopConfig
+  /** esbuild aliases, used by tests to map workspace sources */
+  alias?: Record<string, string>
+  watch?: boolean
+  onRebuild?: () => void
+}
+
+export interface BundlePreloadOptions {
+  /** Directory containing the `preload.ts` template */
+  templateDir: string
+  /** Directory receiving `preload.cjs` */
+  outDir: string
+  /** esbuild aliases, used by tests to map workspace sources */
+  alias?: Record<string, string>
+}
+
+function watchPlugin(onRebuild: () => void): Plugin {
+  return {
+    name: 'uni-desktop-watch',
+    setup(build) {
+      build.onEnd((result) => {
+        if (result.errors.length > 0) {
+          logWarn('main process rebuild failed:', result.errors[0]?.text)
+          return
+        }
+        onRebuild()
+      })
+    },
+  }
+}
+
+export async function bundleEntry(options: BundleEntryOptions): Promise<BuildContext | undefined> {
+  const buildOptions = {
+    entryPoints: [options.entryPath],
+    bundle: true,
+    platform: 'node' as const,
+    format: 'cjs' as const,
+    target: 'node20',
+    outfile: join(options.outDir, 'main.cjs'),
+    external: ELECTRON_EXTERNALS,
+    define: { __DESKTOP_CONFIG__: JSON.stringify(options.baked) },
+    alias: options.alias,
+    logLevel: 'silent' as const,
+    plugins: options.watch ? [watchPlugin(() => options.onRebuild?.())] : undefined,
+  }
+
+  if (!options.watch) {
+    await build(buildOptions)
+    return undefined
+  }
+
+  const ctx = await context(buildOptions)
+  await ctx.watch()
+  return ctx
+}
+
+export async function bundlePreload(options: BundlePreloadOptions): Promise<void> {
+  await build({
+    entryPoints: [join(options.templateDir, 'preload.ts')],
+    bundle: true,
+    platform: 'node',
+    format: 'cjs',
+    target: 'node20',
+    outfile: join(options.outDir, 'preload.cjs'),
+    external: ['electron'],
+    alias: options.alias,
+    logLevel: 'silent',
+  })
+}

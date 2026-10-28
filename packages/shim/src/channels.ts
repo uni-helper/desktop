@@ -7,3 +7,7 @@ export const shimChannels = {
   removeSavedFile: 'desktop:uni:removeSavedFile',
   openDocument: 'desktop:uni:openDocument',
 } as const
+
+export type ShimChannel = (typeof shimChannels)[keyof typeof shimChannels]
+
+export const allShimChannels: ShimChannel[] = Object.values(shimChannels)
