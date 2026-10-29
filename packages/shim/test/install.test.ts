@@ -43,9 +43,8 @@ describe('installDesktopShim', () => {
     const { installDesktopShim } = await import('../src/install')
     installDesktopShim()
 
-    expect(typeof uni.setClipboardData).toBe('function')
-    expect(typeof uni.chooseImage).toBe('function')
     expect(typeof uni.saveFile).toBe('function')
+    expect(typeof uni.getSavedFileList).toBe('function')
   })
 
   it('patches uni assigned after install via the assignment interceptor', async () => {
@@ -58,7 +57,7 @@ describe('installDesktopShim', () => {
     const uni: Record<string, any> = {}
     ;(window as any).uni = uni
 
-    expect(typeof uni.setClipboardData).toBe('function')
+    expect(typeof uni.saveFile).toBe('function')
     expect(uni).toBe((window as any).uni)
   })
 
@@ -75,7 +74,7 @@ describe('installDesktopShim', () => {
     ;(window as any).uni = uni
     await flushAsync()
 
-    expect(typeof uni.setClipboardData).toBe('function')
+    expect(typeof uni.saveFile).toBe('function')
   })
 
   it('ignores non-object uni values', async () => {

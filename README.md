@@ -12,7 +12,7 @@
 - **`uni-desktop build`**：构建 H5 产物，组装成 Electron 应用目录（`dist/desktop`），再用 electron-builder 生成 Windows（NSIS）/ macOS（dmg）/ Linux（AppImage、deb）安装包
 - **`uni-desktop pack`**：对已组装的 `dist/desktop` 单独打包
 - **`uni-desktop init`**：脚手架 `unh.config.ts`、规范化 manifest.json（hash 路由 + 相对 base）、安装依赖
-- **uni API 垫片**：`uni.setClipboardData`、`uni.chooseImage`、`uni.saveFile`、`uni.openDocument` 等 H5 端缺失或不完整的内置 API，在桌面端桥接到 Electron 原生能力；纯浏览器环境自动 no-op
+- **uni API 垫片**：只补 H5 端没有实现的内置 API（`uni.saveFile` / `getSavedFileList` / `getSavedFileInfo` / `removeSavedFile`），外加 `openDocument` 对 `desktop-file://` 的桥接；H5 已实现的 API 一律沿用 uni-h5 原版，纯浏览器环境整体 no-op
 - **SDK 配置**：所有窗口、托盘、更新、打包选项集中在 `unh.config.ts` 的 `desktop` 键下，未覆盖的值回退到 `manifest.json`
 
 ## 使用
@@ -140,23 +140,25 @@ export default defineConfig({
 
 ## 垫片支持的 API
 
-在 Electron 环境中，以下 `uni.*` API 由垫片桥接到主进程原生实现：
+原则：**uni-h5 已经实现的 API 一律沿用原版**，桌面端与 H5 行为完全一致；只有 H5 端没有实现的 API 才由垫片桥接到 Electron 主进程。
 
-| API | 行为 |
-| --- | --- |
-| `uni.setClipboardData` | Electron clipboard 写入 |
-| `uni.getClipboardData` | Electron clipboard 读取 |
-| `uni.chooseImage` | 原生文件对话框，多选，返回 `tempFilePaths` / `tempFiles` |
-| `uni.chooseVideo` | 原生文件对话框，单选，返回 `tempFilePath` |
-| `uni.chooseFile` | 原生文件对话框，支持 `count` / `extension` |
-| `uni.saveFile` | 把临时文件持久化到应用管理目录，返回 `savedFilePath` |
-| `uni.getSavedFileList` | 列出持久化文件 |
-| `uni.removeSavedFile` | 删除持久化文件 |
-| `uni.openDocument` | 调用系统默认程序打开文件 |
+| API | H5 端状态 | 桌面端行为 |
+| --- | --- | --- |
+| `uni.saveFile` | 未实现（直接 fail） | 把临时文件写入应用管理目录，返回 `savedFilePath` |
+| `uni.getSavedFileList` | 未实现（直接 fail） | 列出应用管理目录内的文件 |
+| `uni.getSavedFileInfo` | 未实现（直接 fail） | 返回文件的 `size` / `createTime` |
+| `uni.removeSavedFile` | 未实现（直接 fail） | 删除应用管理目录内的文件 |
+| `uni.openDocument` | `window.open(filePath)` | **唯一例外**：`desktop-file://` 路径交给系统默认程序打开，其余路径仍走 H5 原版 |
 
-选中的文件会复制到应用管理的临时目录，并通过自定义的 `desktop-file://` 协议提供给渲染进程加载（严格限制在应用管理的目录内）。所有 API 同时支持回调风格与 Promise 风格，错误遵循 `errMsg: 'xxx:fail ...'` 约定，用户取消时返回 `fail cancel`。
+`uni.setClipboardData`、`uni.getClipboardData`、`uni.chooseImage`、`uni.chooseVideo`、`uni.chooseFile` 等 H5 已实现的 API 不会被改写，行为与 H5 一致。
 
-未列出的 API 保持 uni-h5 原生行为；在纯浏览器环境打开时垫片整体 no-op。
+### 文件路径
+
+`uni.chooseImage` / `chooseVideo` / `chooseFile` 沿用 H5 实现，返回的 `tempFilePath` 是 `blob:` URL。`uni.saveFile` 会在渲染端读取该 URL 的字节并发送给主进程落盘，因此 `tempFilePath` 必须是当前页面仍然有效的选择结果（刷新后失效）。
+
+保存后的 `savedFilePath` 形如 `desktop-file://f/<绝对路径>`，由自定义协议提供给渲染进程加载，并严格限制在应用管理目录内。`uni.getSavedFileList` / `getSavedFileInfo` / `removeSavedFile` / `openDocument` 只接受该目录内的路径。
+
+所有垫片 API 同时支持回调风格与 Promise 风格，错误遵循 `errMsg: 'xxx:fail ...'` 约定。在纯浏览器环境打开时垫片整体 no-op。
 
 ## 自动更新
 

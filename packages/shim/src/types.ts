@@ -16,13 +16,6 @@ export interface UniOptions {
   [key: string]: unknown
 }
 
-export interface ChosenFile {
-  originalPath: string
-  tempPath: string
-  name: string
-  size: number
-}
-
 declare global {
   interface Window {
     __UNI_DESKTOP_BRIDGE__?: DesktopBridge

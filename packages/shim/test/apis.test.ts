@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DesktopBridge } from '../src/types'
-import { patchClipboard } from '../src/apis/clipboard'
-import { patchChooseFile } from '../src/apis/file'
+import { patchOpenDocument } from '../src/apis/open-document'
 import { patchSavedFile } from '../src/apis/saved-file'
+import { patchUni } from '../src/patch'
 
 function createBridge(responders: Record<string, (payload: any) => any> = {}) {
   const bridge = {
@@ -22,131 +22,78 @@ function patchedUni(patch: (uni: Record<string, any>) => void): Record<string, a
   return uni
 }
 
+/** Build a `blob:`-like URL whose bytes are readable through `fetch`. */
+function stubTempFile(content: string, type = 'image/png'): string {
+  const url = `blob:test/${Math.random().toString(36).slice(2)}`
+  vi.stubGlobal('fetch', vi.fn(async (input: string) => {
+    if (input !== url)
+      return new Response(null, { status: 404 })
+    return new Response(content, { headers: { 'content-type': type } })
+  }))
+  return url
+}
+
 beforeEach(() => {
   delete window.__UNI_DESKTOP_BRIDGE__
+  vi.unstubAllGlobals()
 })
 
-describe('clipboard', () => {
-  it('setClipboardData resolves in promise style', async () => {
-    const bridge = createBridge()
-    const uni = patchedUni(patchClipboard)
-
-    const res = await uni.setClipboardData({ data: 'hello' })
-
-    expect(res).toEqual({ errMsg: 'setClipboardData:ok', data: 'hello' })
-    expect(bridge.invoke).toHaveBeenCalledWith('desktop:uni:setClipboardData', { data: 'hello' })
-  })
-
-  it('setClipboardData works in callback style and returns undefined', async () => {
+describe('patchUni scope', () => {
+  it('leaves APIs that uni-h5 implements untouched', () => {
     createBridge()
-    const uni = patchedUni(patchClipboard)
-    const success = vi.fn()
-    const complete = vi.fn()
+    const original = {
+      setClipboardData: vi.fn(),
+      getClipboardData: vi.fn(),
+      chooseImage: vi.fn(),
+      chooseVideo: vi.fn(),
+      chooseFile: vi.fn(),
+      openDocument: vi.fn(),
+    }
+    const uni = { ...original }
+    patchUni(uni)
 
-    const returned = uni.setClipboardData({ data: 'x', success, complete })
-    await vi.waitFor(() => expect(success).toHaveBeenCalled())
-
-    expect(returned).toBeUndefined()
-    expect(success).toHaveBeenCalledWith({ errMsg: 'setClipboardData:ok', data: 'x' })
-    expect(complete).toHaveBeenCalledWith({ errMsg: 'setClipboardData:ok', data: 'x' })
+    expect(uni.setClipboardData).toBe(original.setClipboardData)
+    expect(uni.getClipboardData).toBe(original.getClipboardData)
+    expect(uni.chooseImage).toBe(original.chooseImage)
+    expect(uni.chooseVideo).toBe(original.chooseVideo)
+    expect(uni.chooseFile).toBe(original.chooseFile)
   })
 
-  it('setClipboardData rejects invalid data with fail callback', async () => {
+  it('patches only the APIs uni-h5 does not implement', () => {
     createBridge()
-    const uni = patchedUni(patchClipboard)
-    const fail = vi.fn()
+    const uni = patchedUni(patchUni)
 
-    uni.setClipboardData({ data: 1, fail })
-    await vi.waitFor(() => expect(fail).toHaveBeenCalled())
-
-    expect(fail).toHaveBeenCalledWith({ errMsg: 'setClipboardData:fail data is required' })
-  })
-
-  it('getClipboardData returns clipboard content', async () => {
-    createBridge({
-      'desktop:uni:getClipboardData': () => ({ data: 'clip' }),
-    })
-    const uni = patchedUni(patchClipboard)
-
-    const res = await uni.getClipboardData()
-
-    expect(res).toEqual({ errMsg: 'getClipboardData:ok', data: 'clip' })
-  })
-})
-
-describe('choose file', () => {
-  it('chooseImage returns tempFilePaths and tempFiles', async () => {
-    createBridge({
-      'desktop:uni:chooseFile': () => ({
-        files: [
-          { originalPath: '/tmp/a.png', tempPath: 'desktop-file://f/a', name: 'a.png', size: 1 },
-          { originalPath: '/tmp/b.png', tempPath: 'desktop-file://f/b', name: 'b.png', size: 2 },
-        ],
-      }),
-    })
-    const uni = patchedUni(patchChooseFile)
-
-    const res = await uni.chooseImage({ count: 2 })
-
-    expect(res.errMsg).toBe('chooseImage:ok')
-    expect(res.tempFilePaths).toEqual(['desktop-file://f/a', 'desktop-file://f/b'])
-    expect(res.tempFiles[0]).toMatchObject({ path: 'desktop-file://f/a', size: 1, fileType: 'image' })
-  })
-
-  it('chooseVideo returns a single tempFilePath', async () => {
-    createBridge({
-      'desktop:uni:chooseFile': () => ({
-        files: [{ originalPath: '/tmp/v.mp4', tempPath: 'desktop-file://f/v', name: 'v.mp4', size: 3 }],
-      }),
-    })
-    const uni = patchedUni(patchChooseFile)
-
-    const res = await uni.chooseVideo()
-
-    expect(res).toMatchObject({ errMsg: 'chooseVideo:ok', tempFilePath: 'desktop-file://f/v', size: 3 })
-  })
-
-  it('normalizes extensions and forwards kind and count', async () => {
-    const bridge = createBridge({
-      'desktop:uni:chooseFile': () => ({ files: [] }),
-    })
-    const uni = patchedUni(patchChooseFile)
-
-    await uni.chooseFile({ count: 3, extension: ['.pdf', 'DOC'] })
-
-    expect(bridge.invoke).toHaveBeenCalledWith('desktop:uni:chooseFile', {
-      kind: 'file',
-      count: 3,
-      extensions: ['pdf', 'doc'],
-    })
-  })
-
-  it('reports cancel as a uni fail result', async () => {
-    createBridge({
-      'desktop:uni:chooseFile': () => {
-        throw new Error('cancel')
-      },
-    })
-    const uni = patchedUni(patchChooseFile)
-    const fail = vi.fn()
-
-    uni.chooseImage({ fail })
-    await vi.waitFor(() => expect(fail).toHaveBeenCalled())
-
-    expect(fail).toHaveBeenCalledWith({ errMsg: 'chooseImage:fail cancel' })
+    expect(typeof uni.saveFile).toBe('function')
+    expect(typeof uni.getSavedFileList).toBe('function')
+    expect(typeof uni.getSavedFileInfo).toBe('function')
+    expect(typeof uni.removeSavedFile).toBe('function')
   })
 })
 
 describe('saved files', () => {
-  it('saveFile returns savedFilePath', async () => {
-    createBridge({
+  it('saveFile reads the temp blob and sends bytes to the main process', async () => {
+    const tempFilePath = stubTempFile('png-bytes')
+    const bridge = createBridge({
       'desktop:uni:saveFile': () => ({ savedFilePath: 'desktop-file://f/saved' }),
     })
     const uni = patchedUni(patchSavedFile)
 
-    const res = await uni.saveFile({ tempFilePath: 'desktop-file://f/a' })
+    const res = await uni.saveFile({ tempFilePath })
 
     expect(res).toEqual({ errMsg: 'saveFile:ok', savedFilePath: 'desktop-file://f/saved' })
+    expect(bridge.invoke).toHaveBeenCalledWith('desktop:uni:saveFile', {
+      base64: btoa('png-bytes'),
+      mime: 'image/png',
+    })
+  })
+
+  it('saveFile reports an unreadable temp path', async () => {
+    createBridge()
+    const uni = patchedUni(patchSavedFile)
+
+    await expect(uni.saveFile({ tempFilePath: 'blob:test/gone' }))
+      .rejects
+      .toMatchObject({ errMsg: expect.stringContaining('saveFile:fail') })
   })
 
   it('getSavedFileList returns the file list', async () => {
@@ -162,15 +109,24 @@ describe('saved files', () => {
     expect(res.fileList).toHaveLength(1)
   })
 
-  it('removeSavedFile and openDocument resolve with ok', async () => {
+  it('getSavedFileInfo returns size and createTime', async () => {
+    createBridge({
+      'desktop:uni:getSavedFileInfo': () => ({ size: 7, createTime: 123 }),
+    })
+    const uni = patchedUni(patchSavedFile)
+
+    const res = await uni.getSavedFileInfo({ filePath: 'desktop-file://f/saved' })
+
+    expect(res).toEqual({ errMsg: 'getSavedFileInfo:ok', size: 7, createTime: 123 })
+  })
+
+  it('removeSavedFile resolves with ok', async () => {
     const bridge = createBridge()
     const uni = patchedUni(patchSavedFile)
 
     const removed = await uni.removeSavedFile({ filePath: 'desktop-file://f/saved' })
-    const opened = await uni.openDocument({ filePath: 'desktop-file://f/saved' })
 
     expect(removed.errMsg).toBe('removeSavedFile:ok')
-    expect(opened.errMsg).toBe('openDocument:ok')
     expect(bridge.invoke).toHaveBeenCalledWith('desktop:uni:removeSavedFile', { filePath: 'desktop-file://f/saved' })
   })
 
@@ -179,5 +135,33 @@ describe('saved files', () => {
     const uni = patchedUni(patchSavedFile)
 
     await expect(uni.saveFile()).rejects.toMatchObject({ errMsg: 'saveFile:fail tempFilePath is required' })
+  })
+})
+
+describe('openDocument', () => {
+  it('bridges desktop-file paths to the main process', async () => {
+    const bridge = createBridge()
+    const original = vi.fn()
+    const uni: Record<string, any> = { openDocument: original }
+    patchOpenDocument(uni)
+
+    const opened = await uni.openDocument({ filePath: 'desktop-file://f/saved' })
+
+    expect(opened.errMsg).toBe('openDocument:ok')
+    expect(bridge.invoke).toHaveBeenCalledWith('desktop:uni:openDocument', {
+      filePath: 'desktop-file://f/saved',
+      fileType: undefined,
+    })
+    expect(original).not.toHaveBeenCalled()
+  })
+
+  it('delegates every other path to the uni-h5 implementation', () => {
+    createBridge()
+    const original = vi.fn(() => 'h5')
+    const uni: Record<string, any> = { openDocument: original }
+    patchOpenDocument(uni)
+
+    expect(uni.openDocument({ filePath: 'https://example.com/doc.pdf' })).toBe('h5')
+    expect(original).toHaveBeenCalledWith({ filePath: 'https://example.com/doc.pdf' })
   })
 })

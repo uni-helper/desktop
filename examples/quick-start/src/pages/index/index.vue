@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 
-const message = ref('Try the desktop APIs below.')
+const message = ref('Clipboard and file picking use uni-h5 as-is; saving uses the desktop shim.')
 const clipboardText = ref('')
 const imagePath = ref('')
 const savedFilePath = ref('')
+const savedFiles = ref([])
 const platform = ref('')
 
 async function copyToClipboard() {
@@ -20,7 +21,7 @@ async function readClipboard() {
 async function pickImage() {
   const res = await uni.chooseImage({ count: 1 })
   imagePath.value = res.tempFilePaths[0] ?? ''
-  message.value = 'Image picked through the native dialog.'
+  message.value = 'Image picked by uni-h5 (tempFilePath is a blob: URL).'
 }
 
 async function saveImage() {
@@ -31,6 +32,12 @@ async function saveImage() {
   const res = await uni.saveFile({ tempFilePath: imagePath.value })
   savedFilePath.value = res.savedFilePath
   message.value = 'Saved into the app-managed directory.'
+  await refreshSavedFiles()
+}
+
+async function refreshSavedFiles() {
+  const res = await uni.getSavedFileList()
+  savedFiles.value = res.fileList
 }
 
 async function openSaved() {
@@ -42,6 +49,7 @@ async function openSaved() {
 }
 
 onMounted(() => {
+  void refreshSavedFiles()
   uni.getSystemInfo({
     success: (res) => {
       platform.value = `${res.osName} ${res.osVersion}`
@@ -89,6 +97,9 @@ onMounted(() => {
     </button>
     <text v-if="savedFilePath" class="meta small">
       {{ savedFilePath }}
+    </text>
+    <text v-if="savedFiles.length" class="meta">
+      Saved files: {{ savedFiles.length }}
     </text>
   </view>
 </template>

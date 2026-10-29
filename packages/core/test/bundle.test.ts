@@ -80,7 +80,7 @@ describe('bundlePreload', () => {
 
     const output = await readFile(join(outDir, 'preload.cjs'), 'utf8')
     expect(output).toContain('contextBridge')
-    expect(output).toContain('desktop:uni:setClipboardData')
+    expect(output).toContain('desktop:uni:saveFile')
     expect(output).toContain('desktop:uni:openDocument')
   })
 })

@@ -1,8 +1,8 @@
 import { existsSync } from 'node:fs'
-import { copyFile, mkdir, readFile, readdir, realpath, stat, unlink } from 'node:fs/promises'
+import { mkdir, readFile, readdir, realpath, stat, unlink, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
-import { basename, extname, join, sep } from 'node:path'
-import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, protocol, shell, Tray } from 'electron'
+import { extname, join, sep } from 'node:path'
+import { app, BrowserWindow, Menu, ipcMain, protocol, shell, Tray } from 'electron'
 import type { MenuItemConstructorOptions } from 'electron'
 import type { BakedDesktopConfig } from '../baked'
 import { shimChannels } from '@uni-helper/desktop-shim'
@@ -14,10 +14,6 @@ let mainWindow: BrowserWindow | null = null
 
 export function getMainWindow(): BrowserWindow | null {
   return mainWindow
-}
-
-function tempRoot(): string {
-  return join(app.getPath('temp'), 'uni-desktop-uploads')
 }
 
 function savedRoot(): string {
@@ -58,7 +54,7 @@ function registerDesktopFileProtocol(): void {
 async function serveDesktopFileRequest(request: Request): Promise<Response> {
   try {
     const resolved = await realpath(parseDesktopFileUrl(request.url))
-    if (!isInsideRoots(resolved, [tempRoot(), savedRoot()]))
+    if (!isInsideRoots(resolved, [savedRoot()]))
       return new Response('forbidden', { status: 403 })
     const data = await readFile(resolved)
     return new Response(new Uint8Array(data), { headers: { 'content-type': mimeFromExtension(resolved) } })
@@ -68,70 +64,36 @@ async function serveDesktopFileRequest(request: Request): Promise<Response> {
   }
 }
 
-const DEFAULT_CHOOSE_EXTENSIONS: Record<'image' | 'video' | 'file', string[]> = {
-  image: ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'svg'],
-  video: ['mp4', 'avi', 'mov', 'mkv', 'webm', 'm4v'],
-  file: [],
-}
-
-function buildDialogFilters(kind: 'image' | 'video' | 'file', extensions: string[] | undefined): { name: string, extensions: string[] }[] | undefined {
-  const list = extensions?.length ? extensions : DEFAULT_CHOOSE_EXTENSIONS[kind]
-  return list.length > 0 ? [{ name: kind, extensions: list }] : undefined
-}
-
-async function copyIntoTempRoot(sourcePath: string): Promise<{ originalPath: string, tempPath: string, name: string, size: number }> {
-  await mkdir(tempRoot(), { recursive: true })
-  const target = join(tempRoot(), `${randomUUID()}${extname(sourcePath)}`)
-  await copyFile(sourcePath, target)
-  const stats = await stat(target)
-  return {
-    originalPath: sourcePath,
-    tempPath: toDesktopFileUrl(target),
-    name: basename(sourcePath),
-    size: stats.size,
-  }
+const EXTENSION_BY_MIME: Record<string, string> = {
+  'image/png': '.png',
+  'image/jpeg': '.jpg',
+  'image/gif': '.gif',
+  'image/webp': '.webp',
+  'image/bmp': '.bmp',
+  'image/svg+xml': '.svg',
+  'video/mp4': '.mp4',
+  'video/webm': '.webm',
+  'video/quicktime': '.mov',
+  'video/x-m4v': '.m4v',
+  'application/pdf': '.pdf',
+  'text/plain': '.txt',
+  'application/json': '.json',
+  'application/zip': '.zip',
 }
 
 function registerIpcHandlers(): void {
-  ipcMain.handle(shimChannels.setClipboardData, (_event, payload) => {
-    const data = assertObjectPayload(payload).data
-    if (typeof data !== 'string')
-      throw new TypeError('data must be a string')
-    clipboard.writeText(data)
-    return {}
-  })
-
-  ipcMain.handle(shimChannels.getClipboardData, () => ({ data: clipboard.readText() }))
-
-  ipcMain.handle(shimChannels.chooseFile, async (event, payload) => {
-    const data = assertObjectPayload(payload)
-    const kind = data.kind
-    if (kind !== 'image' && kind !== 'video' && kind !== 'file')
-      throw new TypeError('kind must be image, video or file')
-    const count = Math.max(1, Math.min(50, Number(data.count) || 1))
-    const extensions = Array.isArray(data.extensions)
-      ? data.extensions.filter((item): item is string => typeof item === 'string')
-      : undefined
-    const options = {
-      properties: count > 1 ? ['openFile', 'multiSelections'] as Array<'openFile' | 'multiSelections'> : ['openFile'] as Array<'openFile'>,
-      filters: buildDialogFilters(kind, extensions),
-    }
-    const ownerWindow = BrowserWindow.fromWebContents(event.sender)
-    const result = ownerWindow
-      ? await dialog.showOpenDialog(ownerWindow, options)
-      : await dialog.showOpenDialog(options)
-    if (result.canceled || result.filePaths.length === 0)
-      throw new Error('cancel')
-    const files = await Promise.all(result.filePaths.slice(0, count).map(copyIntoTempRoot))
-    return { files }
-  })
-
+  // The renderer sends bytes because uni-h5 hands out `blob:` temp paths,
+  // which the main process cannot resolve on its own.
   ipcMain.handle(shimChannels.saveFile, async (_event, payload) => {
     const data = assertObjectPayload(payload)
-    const source = await pathFromManagedValue(data.tempFilePath, [tempRoot()], 'tempFilePath')
+    const base64 = data.base64
+    if (typeof base64 !== 'string' || !base64)
+      throw new TypeError('base64 must be a string')
+    const mime = typeof data.mime === 'string' ? data.mime : undefined
+    const extension = mime ? EXTENSION_BY_MIME[mime] ?? '' : ''
     await mkdir(savedRoot(), { recursive: true })
-    const target = join(savedRoot(), `${randomUUID()}${extname(source)}`)
-    await copyFile(source, target)
+    const target = join(savedRoot(), `${randomUUID()}${extension}`)
+    await writeFile(target, Buffer.from(base64, 'base64'))
     return { savedFilePath: toDesktopFileUrl(target) }
   })
 
@@ -146,6 +108,13 @@ function registerIpcHandlers(): void {
     return { fileList }
   })
 
+  ipcMain.handle(shimChannels.getSavedFileInfo, async (_event, payload) => {
+    const data = assertObjectPayload(payload)
+    const filePath = await pathFromManagedValue(data.filePath, [savedRoot()], 'filePath')
+    const stats = await stat(filePath)
+    return { size: stats.size, createTime: Math.round(stats.birthtimeMs) }
+  })
+
   ipcMain.handle(shimChannels.removeSavedFile, async (_event, payload) => {
     const data = assertObjectPayload(payload)
     const filePath = await pathFromManagedValue(data.filePath, [savedRoot()], 'filePath')
@@ -155,7 +124,7 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle(shimChannels.openDocument, async (_event, payload) => {
     const data = assertObjectPayload(payload)
-    const filePath = await pathFromManagedValue(data.filePath, [tempRoot(), savedRoot()], 'filePath')
+    const filePath = await pathFromManagedValue(data.filePath, [savedRoot()], 'filePath')
     const errorMessage = await shell.openPath(filePath)
     if (errorMessage)
       throw new Error(errorMessage)
