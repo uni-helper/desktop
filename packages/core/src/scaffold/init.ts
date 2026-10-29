@@ -16,17 +16,19 @@ const RUNTIME_DEPS = ['@uni-helper/desktop-shim']
 const DEV_DEPS = ['@uni-helper/desktop', '@uni-helper/desktop-cli', 'electron', 'electron-builder', 'electron-updater']
 
 function configTemplate(appName: string): string {
-  return `import { defineDesktopConfig } from '@uni-helper/desktop'
+  return `import { defineConfig } from '@uni-helper/desktop'
 
-export default defineDesktopConfig({
-  app: {
-    name: '${appName}',
-    // A 512x512 PNG works for window icons and all installer targets
-    // icon: 'static/logo.png',
-  },
-  window: {
-    width: 420,
-    height: 760,
+export default defineConfig({
+  desktop: {
+    app: {
+      name: '${appName}',
+      // A 512x512 PNG works for window icons and all installer targets
+      // icon: 'static/logo.png',
+    },
+    window: {
+      width: 420,
+      height: 760,
+    },
   },
 })
 `
@@ -38,7 +40,7 @@ const DESKTOP_SCRIPTS: Record<string, string> = {
   'desktop:pack': 'uni-desktop pack',
 }
 
-/** Scaffold desktop.config.ts, wire scripts and manifest h5 settings, and install dependencies. */
+/** Scaffold unh.config.ts, wire scripts and manifest h5 settings, and install dependencies. */
 export async function init(options: InitOptions = {}): Promise<void> {
   const root = resolve(options.cwd ?? process.cwd())
   const manifestPath = join(root, 'src/manifest.json')
@@ -62,10 +64,10 @@ export async function init(options: InitOptions = {}): Promise<void> {
     log('updated manifest.json (h5.router mode "hash", base "./")')
   }
 
-  const configPath = join(root, 'desktop.config.ts')
+  const configPath = join(root, 'unh.config.ts')
   if (!existsSync(configPath)) {
     await writeFile(configPath, configTemplate(manifest.name ?? 'uni-app-desktop'))
-    log('created desktop.config.ts')
+    log('created unh.config.ts')
   }
 
   const mainPath = join(root, 'src/main.ts')

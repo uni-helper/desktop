@@ -9,7 +9,7 @@ export class DesktopError extends Error {
 
 // #region Functions
 export async function build(_) {}
-export function defineDesktopConfig(_) {}
+export function defineConfig(_) {}
 export async function dev(_) {}
 export async function init(_) {}
 export async function pack(_) {}

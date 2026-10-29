@@ -1,6 +1,6 @@
-import type { DesktopConfig } from '../types'
+import type { UnhConfig } from '../types'
 
-/** Type helper for `desktop.config.ts`. */
-export function defineDesktopConfig(config: DesktopConfig): DesktopConfig {
+/** Type helper for `unh.config.ts`, following the unconfig `defineConfig` convention. */
+export function defineConfig(config: UnhConfig): UnhConfig {
   return config
 }

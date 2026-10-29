@@ -2,7 +2,7 @@
 
 A minimal uni-app (Vue3 + Vite CLI) project demonstrating `@uni-helper/desktop`:
 
-- `desktop.config.ts` with window and app configuration
+- `unh.config.ts` with window and app configuration under the `desktop` key
 - the desktop shim wired in `src/main.ts`
 - a demo page exercising the shimmed APIs: clipboard, native image picker, file persistence and `openDocument`
 

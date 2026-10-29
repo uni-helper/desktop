@@ -10,7 +10,7 @@
     },
     "examples/quick-start": {
       "vite": false,
-      "entry": ["src/main.ts", "src/pages/**/*.vue", "desktop.config.ts"],
+      "entry": ["src/main.ts", "src/pages/**/*.vue", "unh.config.ts"],
       "ignore": ["vite.config.ts"],
       "ignoreDependencies": [
         "@dcloudio/uni-cli-shared",

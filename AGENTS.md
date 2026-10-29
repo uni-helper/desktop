@@ -5,3 +5,15 @@
 - Before a PR, all gates MUST pass:
   `pnpm lint && pnpm knip && pnpm test && pnpm typecheck && pnpm build`.
   Commits follow Conventional Commits.
+
+## Project stage
+
+- The packages are **unreleased and under active development**: no external users
+  depend on the current API surface yet.
+- Breaking API changes **MAY** be made freely - renaming or removing exported
+  functions, types and options, and changing config file formats. Do not add
+  compatibility shims, deprecation aliases or migration paths for unpublished
+  APIs.
+- When a public API changes, update the API snapshots
+  (`pnpm --filter @uni-helper/desktop test` with `TSNAPI_ALLOW_BREAKING=1` and
+  `-u`) in the same change, and update the READMEs to match.

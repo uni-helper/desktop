@@ -59,16 +59,18 @@ describe('resolveDesktopConfig', () => {
     expect(warnings[1]).toContain('base')
   })
 
-  it('lets desktop.config.ts override the manifest', async () => {
+  it('lets unh.config.ts override the manifest', async () => {
     const root = await createProject({
       'src/manifest.json': JSON.stringify({ name: 'from-manifest', versionName: '1.0.0' }),
-      'desktop.config.json': JSON.stringify({
-        app: { name: 'from-config', appId: 'com.example.app', version: '9.9.9', icon: 'static/logo.png' },
-        window: { title: 'Custom', width: 1280, height: 800 },
-        dev: { url: 'http://localhost:3000' },
-        tray: { icon: 'static/tray.png' },
-        updater: { provider: 'github', autoDownload: false },
-        pack: { autoPack: false, targets: { win: ['portable'] } },
+      'unh.config.json': JSON.stringify({
+        desktop: {
+          app: { name: 'from-config', appId: 'com.example.app', version: '9.9.9', icon: 'static/logo.png' },
+          window: { title: 'Custom', width: 1280, height: 800 },
+          dev: { url: 'http://localhost:3000' },
+          tray: { icon: 'static/tray.png' },
+          updater: { provider: 'github', autoDownload: false },
+          pack: { autoPack: false, targets: { win: ['portable'] } },
+        },
       }),
       'static/logo.png': 'png',
       'static/tray.png': 'png',
@@ -91,8 +93,8 @@ describe('resolveDesktopConfig', () => {
   it('loads a TypeScript config through unconfig', async () => {
     const root = await createProject({
       'src/manifest.json': JSON.stringify({ name: 'app' }),
-      'desktop.config.ts': `import { defineDesktopConfig } from '@uni-helper/desktop'
-export default defineDesktopConfig({ window: { title: 'TS Title' } })`,
+      'unh.config.ts': `import { defineConfig } from '@uni-helper/desktop'
+export default defineConfig({ desktop: { window: { title: 'TS Title' } } })`,
     })
 
     const { resolved } = await resolveDesktopConfig(root)
@@ -100,10 +102,37 @@ export default defineDesktopConfig({ window: { title: 'TS Title' } })`,
     expect(resolved.window.title).toBe('TS Title')
   })
 
+  it('ignores top-level keys owned by other tools', async () => {
+    const root = await createProject({
+      'src/manifest.json': JSON.stringify({ name: 'app' }),
+      'unh.config.json': JSON.stringify({
+        somethingElse: { enabled: true },
+        desktop: { window: { width: 1024 } },
+      }),
+    })
+
+    const { resolved } = await resolveDesktopConfig(root)
+
+    expect(resolved.window.width).toBe(1024)
+    expect(resolved.appName).toBe('app')
+  })
+
+  it('falls back to defaults when the config has no desktop key', async () => {
+    const root = await createProject({
+      'src/manifest.json': JSON.stringify({ name: 'app' }),
+      'unh.config.json': JSON.stringify({}),
+    })
+
+    const { resolved } = await resolveDesktopConfig(root)
+
+    expect(resolved.window.width).toBe(420)
+    expect(resolved.pack.autoPack).toBe(true)
+  })
+
   it('bakes a serializable config', async () => {
     const root = await createProject({
       'src/manifest.json': JSON.stringify({ name: 'app', h5: { title: 'Baked' } }),
-      'desktop.config.json': JSON.stringify({ tray: { icon: 'static/tray.png' } }),
+      'unh.config.json': JSON.stringify({ desktop: { tray: { icon: 'static/tray.png' } } }),
       'static/tray.png': 'png',
     })
 

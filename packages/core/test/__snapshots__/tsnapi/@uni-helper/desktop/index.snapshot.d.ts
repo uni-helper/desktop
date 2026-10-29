@@ -189,6 +189,10 @@ export interface ResolvedConfig {
     publish?: Record<string, unknown> | Array<Record<string, unknown>>;
   };
 }
+export interface UnhConfig {
+  desktop?: DesktopConfig;
+  [key: string]: unknown;
+}
 // #endregion
 
 // #region Classes
@@ -199,7 +203,7 @@ export declare class DesktopError extends Error {
 
 // #region Functions
 export declare function build(_?: BuildOptions): Promise<BuildResult>;
-export declare function defineDesktopConfig(_: DesktopConfig): DesktopConfig;
+export declare function defineConfig(_: UnhConfig): UnhConfig;
 export declare function dev(_?: DevOptions): Promise<DevHandle>;
 export declare function init(_?: InitOptions): Promise<void>;
 export declare function pack(_?: PackOptions): Promise<PackResult>;

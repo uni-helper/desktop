@@ -29,7 +29,7 @@ export async function waitUntilReady(url: string, options: ProbeOptions = {}): P
     if (Date.now() > deadline) {
       throw new DesktopError(
         `dev server did not become reachable at ${url} within ${timeout}ms. `
-        + `Check the \`dev.url\` option in desktop.config.ts or start the H5 dev server on that URL.`,
+        + `Check the \`desktop.dev.url\` option in unh.config.ts or start the H5 dev server on that URL.`,
       )
     }
     if (!announced) {

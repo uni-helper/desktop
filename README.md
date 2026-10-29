@@ -11,9 +11,9 @@
 - **`uni-desktop dev`**：启动 H5 dev server，就绪后自动打开 Electron 窗口加载它，渲染进程走 Vite 热更新，主进程改动自动重启窗口
 - **`uni-desktop build`**：构建 H5 产物，组装成 Electron 应用目录（`dist/desktop`），再用 electron-builder 生成 Windows（NSIS）/ macOS（dmg）/ Linux（AppImage、deb）安装包
 - **`uni-desktop pack`**：对已组装的 `dist/desktop` 单独打包
-- **`uni-desktop init`**：脚手架 `desktop.config.ts`、规范化 manifest.json（hash 路由 + 相对 base）、安装依赖
+- **`uni-desktop init`**：脚手架 `unh.config.ts`、规范化 manifest.json（hash 路由 + 相对 base）、安装依赖
 - **uni API 垫片**：`uni.setClipboardData`、`uni.chooseImage`、`uni.saveFile`、`uni.openDocument` 等 H5 端缺失或不完整的内置 API，在桌面端桥接到 Electron 原生能力；纯浏览器环境自动 no-op
-- **SDK 配置**：所有窗口、托盘、更新、打包选项集中在 `desktop.config.ts`，未覆盖的值回退到 `manifest.json`
+- **SDK 配置**：所有窗口、托盘、更新、打包选项集中在 `unh.config.ts` 的 `desktop` 键下，未覆盖的值回退到 `manifest.json`
 
 ## 使用
 
@@ -25,7 +25,7 @@
 pnpm dlx @uni-helper/desktop-cli init
 ```
 
-`init` 会完成：写入 `desktop.config.ts`、追加 `desktop:*` 脚本、把 manifest.json 的 `h5.router` 规范为 hash 路由 + `./` base、在 `src/main.ts` 首行注入垫片导入、安装依赖。
+`init` 会完成：写入 `unh.config.ts`、追加 `desktop:*` 脚本、把 manifest.json 的 `h5.router` 规范为 hash 路由 + `./` base、在 `src/main.ts` 首行注入垫片导入、安装依赖。
 
 也可以手动安装：
 
@@ -65,72 +65,76 @@ pnpm desktop:pack           # 对已有 dist/desktop 单独打包
 
 ## 配置
 
-在项目根目录创建 `desktop.config.ts`（`defineDesktopConfig` 提供类型提示）：
+在项目根目录创建 `unh.config.ts`（`defineConfig` 提供类型提示）。所有桌面端配置都放在 `desktop` 键下，这样同一个文件还能承载其他 uni-helper 工具的顶层配置：
 
 ```ts
-import { defineDesktopConfig } from '@uni-helper/desktop'
+import { defineConfig } from '@uni-helper/desktop'
 
-export default defineDesktopConfig({
-  app: {
-    name: 'my-app',              // 默认取 manifest.json 的 name
-    appId: 'com.example.my-app', // 默认派生自 name
-    version: '1.0.0',            // 默认取 manifest.json 的 versionName
-    icon: 'static/logo.png',     // 512x512+ PNG
-    copyright: '© 2026 Example',
-  },
-  window: {
-    title: 'My App',
-    width: 420,
-    height: 760,
-    minWidth: 320,
-    minHeight: 500,
-    center: true,
-    resizable: true,
-    frame: true,
-    titleBarStyle: 'default',
-    autoHideMenuBar: true,
-    backgroundColor: '#ffffff',
-  },
-  dev: {
-    url: 'http://localhost:5173', // Electron 在 dev 模式加载的地址
-    command: 'dev:h5',            // 启动 H5 dev server 的 npm script
-    waitTimeout: 60000,           // 等待 URL 可访问的超时
-    interval: 500,                // 探测间隔
-    openDevtools: true,           // 自动打开 DevTools
-  },
-  build: {
-    command: 'build:h5',          // 构建 H5 的 npm script
-  },
-  tray: {                         // 设为 false 关闭托盘
-    icon: 'static/tray.png',
-    tooltip: 'My App',
-    menu: [{ role: 'quit' }],
-  },
-  updater: {                      // 设为 false 关闭自动更新
-    provider: 'generic',
-    url: 'https://example.com/updates/',
-    autoDownload: true,
-    autoInstallOnAppQuit: true,
-  },
-  main: {
-    entry: 'desktop/main.ts',     // 自定义主进程入口（可选）
-  },
-  pack: {
-    autoPack: true,               // build 后自动运行 electron-builder
-    output: 'dist/release',
-    asar: true,
-    targets: {
-      win: ['nsis'],
-      mac: ['dmg'],
-      linux: ['AppImage', 'deb'],
+export default defineConfig({
+  desktop: {
+    app: {
+      name: 'my-app',              // 默认取 manifest.json 的 name
+      appId: 'com.example.my-app', // 默认派生自 name
+      version: '1.0.0',            // 默认取 manifest.json 的 versionName
+      icon: 'static/logo.png',     // 512x512+ PNG
+      copyright: '© 2026 Example',
     },
-    nsis: { oneClick: false },
-    publish: { provider: 'generic', url: 'https://example.com/updates/' },
+    window: {
+      title: 'My App',
+      width: 420,
+      height: 760,
+      minWidth: 320,
+      minHeight: 500,
+      center: true,
+      resizable: true,
+      frame: true,
+      titleBarStyle: 'default',
+      autoHideMenuBar: true,
+      backgroundColor: '#ffffff',
+    },
+    dev: {
+      url: 'http://localhost:5173', // Electron 在 dev 模式加载的地址
+      command: 'dev:h5',            // 启动 H5 dev server 的 npm script
+      waitTimeout: 60000,           // 等待 URL 可访问的超时
+      interval: 500,                // 探测间隔
+      openDevtools: true,           // 自动打开 DevTools
+    },
+    build: {
+      command: 'build:h5',          // 构建 H5 的 npm script
+    },
+    tray: {                         // 设为 false 关闭托盘
+      icon: 'static/tray.png',
+      tooltip: 'My App',
+      menu: [{ role: 'quit' }],
+    },
+    updater: {                      // 设为 false 关闭自动更新
+      provider: 'generic',
+      url: 'https://example.com/updates/',
+      autoDownload: true,
+      autoInstallOnAppQuit: true,
+    },
+    main: {
+      entry: 'desktop/main.ts',     // 自定义主进程入口（可选）
+    },
+    pack: {
+      autoPack: true,               // build 后自动运行 electron-builder
+      output: 'dist/release',
+      asar: true,
+      targets: {
+        win: ['nsis'],
+        mac: ['dmg'],
+        linux: ['AppImage', 'deb'],
+      },
+      nsis: { oneClick: false },
+      publish: { provider: 'generic', url: 'https://example.com/updates/' },
+    },
   },
 })
 ```
 
-所有字段都是可选的，未配置的值按 `defaults < manifest.json < desktop.config.ts` 合并。
+`unh.config.ts` 由 [unconfig](https://github.com/unocss/unocss/tree/main/packages/unconfig) 加载，因此 `unh.config.{ts,mts,js,mjs,cjs,json}` 都可以使用。`desktop` 之外的顶层键会被忽略，留给其他工具消费。
+
+所有字段都是可选的，未配置的值按 `defaults < manifest.json < unh.config.ts 的 desktop` 合并。
 
 > 要求：manifest.json 的 `h5.router.mode` 必须是 `hash`、`h5.router.base` 必须是 `./`，否则 file:// 加载会白屏。`init` 会自动设置，构建时也会校验并告警。
 

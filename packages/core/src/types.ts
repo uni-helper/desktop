@@ -108,3 +108,14 @@ export interface DesktopConfig {
   main?: DesktopMainConfig
   pack?: DesktopPackConfig
 }
+
+/**
+ * Shape of `unh.config.ts`.
+ *
+ * Desktop options live under the `desktop` key so other uni-helper tools can
+ * share the same config file with their own top-level keys.
+ */
+export interface UnhConfig {
+  desktop?: DesktopConfig
+  [key: string]: unknown
+}

@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { loadConfig } from 'unconfig'
 import type { BakedDesktopConfig } from '../baked'
-import type { DesktopConfig, DesktopTrayMenuItem, DesktopUpdaterConfig, DesktopWindowConfig } from '../types'
+import type { DesktopConfig, DesktopTrayMenuItem, DesktopUpdaterConfig, DesktopWindowConfig, UnhConfig } from '../types'
 
 export interface ManifestInfo {
   name?: string
@@ -153,11 +153,11 @@ function collectWarnings(manifest: ManifestInfo | undefined): string[] {
 }
 
 async function loadUserConfig(root: string): Promise<DesktopConfig | undefined> {
-  const { config } = await loadConfig<DesktopConfig>({
-    sources: [{ files: 'desktop.config' }],
+  const { config } = await loadConfig<UnhConfig>({
+    sources: [{ files: 'unh.config' }],
     cwd: root,
   })
-  return config
+  return config?.desktop
 }
 
 export interface ResolveResult {

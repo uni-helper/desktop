@@ -1,4 +1,4 @@
-export { defineDesktopConfig } from './config/define'
+export { defineConfig } from './config/define'
 export { DesktopError } from './error'
 export { build } from './orchestrate/build'
 export { dev } from './orchestrate/dev'
@@ -17,6 +17,7 @@ export type {
   DesktopTrayMenuItem,
   DesktopUpdaterConfig,
   DesktopWindowConfig,
+  UnhConfig,
 } from './types'
 export type { BuildOptions, BuildResult } from './orchestrate/build'
 export type { DevHandle, DevOptions } from './orchestrate/dev'

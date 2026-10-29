@@ -7,7 +7,7 @@ export function createCli(): ReturnType<typeof cac> {
 
   cli
     .command('dev', 'Start the H5 dev server and launch an Electron window loading it')
-    .option('--url <url>', 'Dev server URL, overrides `dev.url` from desktop.config.ts')
+    .option('--url <url>', 'Dev server URL, overrides `desktop.dev.url` from unh.config.ts')
     .action(withErrorHandling(async (options: { url?: string }) => {
       const { dev } = await import('@uni-helper/desktop')
       const handle = await dev({ cwd: process.cwd(), url: options.url })
@@ -34,7 +34,7 @@ export function createCli(): ReturnType<typeof cac> {
     }))
 
   cli
-    .command('init', 'Scaffold desktop.config.ts, wire scripts and install dependencies')
+    .command('init', 'Scaffold unh.config.ts, wire scripts and install dependencies')
     .option('--no-install', 'Skip installing the required dependencies')
     .action(withErrorHandling(async (options: { install?: boolean }) => {
       const { init } = await import('@uni-helper/desktop')
