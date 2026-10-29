@@ -68,6 +68,33 @@ export async function dev(options: DevOptions = {}): Promise<DevHandle> {
 
   await rm(outDir, { recursive: true, force: true })
   const baked = bakeConfig(resolved)
+
+  // Declared before the watcher starts: esbuild fires `onRebuild` for the
+  // initial build as soon as `watch()` resolves, which can race ahead of the
+  // statements below.
+  const electronBinary = resolveElectronBinary(root)
+  let electronProcess: ChildProcess | undefined
+  let electronStarted = false
+  const spawnElectron = (): void => {
+    electronProcess = spawn(electronBinary, [join(outDir, 'main.cjs')], {
+      cwd: root,
+      env: { ...process.env, DESKTOP_DEV_URL: url },
+      stdio: 'inherit',
+      detached: process.platform !== 'win32',
+    })
+    electronStarted = true
+    electronProcess.once('exit', (code) => {
+      log(`electron exited with code ${code}`)
+    })
+  }
+  async function restartElectron(): Promise<void> {
+    if (!electronStarted)
+      return
+    killTree(electronProcess)
+    await new Promise(resolvePromise => setTimeout(resolvePromise, 100))
+    spawnElectron()
+  }
+
   const watcher = await bundleEntry({
     entryPath: resolveMainEntryPath(root, resolved.mainEntry, templateDir),
     outDir,
@@ -76,25 +103,6 @@ export async function dev(options: DevOptions = {}): Promise<DevHandle> {
     onRebuild: () => void restartElectron(),
   })
   await bundlePreload({ outDir, templateDir })
-
-  const electronBinary = resolveElectronBinary(root)
-  let electronProcess: ChildProcess | undefined
-  const spawnElectron = (): void => {
-    electronProcess = spawn(electronBinary, [join(outDir, 'main.cjs')], {
-      cwd: root,
-      env: { ...process.env, DESKTOP_DEV_URL: url },
-      stdio: 'inherit',
-      detached: process.platform !== 'win32',
-    })
-    electronProcess.once('exit', (code) => {
-      log(`electron exited with code ${code}`)
-    })
-  }
-  async function restartElectron(): Promise<void> {
-    killTree(electronProcess)
-    await new Promise(resolvePromise => setTimeout(resolvePromise, 100))
-    spawnElectron()
-  }
   spawnElectron()
 
   let closed = false
