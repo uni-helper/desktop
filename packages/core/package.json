@@ -55,6 +55,7 @@
   },
   "dependencies": {
     "@uni-helper/desktop-shim": "workspace:*",
+    "consola": "catalog:build",
     "esbuild": "catalog:build",
     "jsonc-parser": "catalog:build",
     "unconfig": "catalog:build"

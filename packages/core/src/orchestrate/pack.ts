@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path'
 import process from 'node:process'
 import { resolveDesktopConfig } from '../config/resolve'
 import { DesktopError } from '../error'
-import { log } from '../log'
+import { logger } from '../log'
 import { APP_DIR, APP_RESOURCES_DIR, appIconFileName } from '../shared/paths'
 import { detectPackageManager, spawnAwait } from './pm'
 
@@ -128,7 +128,7 @@ export async function packInternal(
 
   const cli = resolveElectronBuilderCli(root)
   const pm = detectPackageManager(root)
-  log(`running electron-builder via ${pm} (electron ${electronVersion})...`)
+  logger.start(`running electron-builder via ${pm} (electron ${electronVersion})...`)
   await spawnAwait(process.execPath, [cli, '--config', configPath, ...extraArgs], { cwd: appDir })
   return { output: join(root, resolved.pack.output) }
 }

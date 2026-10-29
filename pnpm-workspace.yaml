@@ -32,6 +32,7 @@ catalogs:
     '@antfu/skills': ^0.1.0
     skills: ^1.7.2
   build:
+    consola: ^3.4.2
     esbuild: ^0.28.0
     jsonc-parser: ^3.3.1
     unconfig: ^7.5.0

@@ -6,11 +6,23 @@ import { mkdir, readdir, readFile, realpath, stat, unlink, writeFile } from 'nod
 import { join, sep } from 'node:path'
 import process from 'node:process'
 import { shimChannels } from '@uni-helper/desktop-shim/channels'
+import { createConsola } from 'consola/basic'
 import { app, BrowserWindow, ipcMain, Menu, protocol, shell, Tray } from 'electron'
 import { DESKTOP_FILE_SCHEME, EXTENSION_BY_MIME, mimeFromExtension, parseDesktopFileUrl, toDesktopFileUrl } from '../shared/protocol'
 
 export type { BakedDesktopConfig } from '../baked'
 export { DESKTOP_FILE_SCHEME, parseDesktopFileUrl, toDesktopFileUrl }
+
+/**
+ * The basic reporter instead of the fancy one: this module ends up bundled into
+ * the packaged app's `main.cjs`, where the full consola (colors, box drawing,
+ * prompts) would add ~110 kB for a handful of diagnostics. Main process output
+ * is read from a terminal or the OS log, so one plain line per message is enough.
+ */
+const logger = createConsola({
+  defaults: { tag: 'uni-desktop' },
+  formatOptions: { date: false },
+})
 
 let mainWindow: BrowserWindow | null = null
 
@@ -231,7 +243,7 @@ function setupTray(baked: BakedDesktopConfig): void {
     tray.on('click', () => getMainWindow()?.show())
   }
   catch (error) {
-    console.warn('[uni-desktop] failed to create tray:', error)
+    logger.error('failed to create tray:', error)
   }
 }
 
@@ -246,12 +258,12 @@ async function setupUpdater(baked: BakedDesktopConfig): Promise<void> {
     if (updater.autoInstallOnAppQuit !== undefined)
       autoUpdater.autoInstallOnAppQuit = updater.autoInstallOnAppQuit
     autoUpdater.on('update-downloaded', () => {
-      console.log('[uni-desktop] update downloaded, it will be installed on quit')
+      logger.success('update downloaded, it will be installed on quit')
     })
     await autoUpdater.checkForUpdates()
   }
   catch (error) {
-    console.warn('[uni-desktop] auto update unavailable:', error instanceof Error ? error.message : error)
+    logger.warn('auto update unavailable:', error instanceof Error ? error.message : error)
   }
 }
 

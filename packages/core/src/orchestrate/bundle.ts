@@ -2,7 +2,7 @@ import type { BuildContext, Plugin } from 'esbuild'
 import type { BakedDesktopConfig } from '../baked'
 import { join } from 'node:path'
 import { build, context } from 'esbuild'
-import { logWarn } from '../log'
+import { logger } from '../log'
 
 const ELECTRON_EXTERNALS = ['electron', 'electron-updater']
 
@@ -33,7 +33,7 @@ function watchPlugin(onRebuild: () => void): Plugin {
     setup(build) {
       build.onEnd((result) => {
         if (result.errors.length > 0) {
-          logWarn('main process rebuild failed:', result.errors[0]?.text)
+          logger.error('main process rebuild failed:', result.errors[0]?.text)
           return
         }
         onRebuild()

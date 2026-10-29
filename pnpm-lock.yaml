@@ -171,6 +171,9 @@ catalogs:
       specifier: ^1.7.2
       version: 1.7.2
   build:
+    consola:
+      specifier: ^3.4.2
+      version: 3.4.2
     esbuild:
       specifier: ^0.28.0
       version: 0.28.2
@@ -344,6 +347,9 @@ importers:
       cac:
         specifier: catalog:cli
         version: 7.1.0
+      consola:
+        specifier: catalog:build
+        version: 3.4.2
     devDependencies:
       '@types/node':
         specifier: catalog:types
@@ -363,6 +369,9 @@ importers:
       '@uni-helper/desktop-shim':
         specifier: workspace:*
         version: link:../shim
+      consola:
+        specifier: catalog:build
+        version: 3.4.2
       esbuild:
         specifier: catalog:build
         version: 0.28.2
@@ -3201,6 +3210,10 @@ packages:
 
   confbox@0.3.1:
     resolution: {integrity: sha512-cKUSoKa8YxFZZSmraVi7onONx3amu77ngK3kGpsYHDH7drPwCRkQE1RYMPlLRrMtnciRj274XNRxcHxnKmDSnA==}
+
+  consola@3.4.2:
+    resolution: {integrity: sha512-5IKcdX0nnYavi6G7TtOhwkYzyjfJlatbjMjuLSfE2kYT5pMDOilZ4OvMhi637CcDICTmz3wARPoyhqyX1Y+XvA==}
+    engines: {node: ^14.18.0 || >=16.10.0}
 
   content-disposition@0.5.4:
     resolution: {integrity: sha512-FveZTNuGw04cxlAiWbzi6zTAL/lhehaWbTtgluJh4/E95DqMwTmha3KZN1aAWA8cFIhHzMZUvLevkw5Rqk+tSQ==}
@@ -8977,6 +8990,8 @@ snapshots:
   confbox@0.1.8: {}
 
   confbox@0.3.1: {}
+
+  consola@3.4.2: {}
 
   content-disposition@0.5.4:
     dependencies:

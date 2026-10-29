@@ -35,7 +35,8 @@
   },
   "dependencies": {
     "@uni-helper/desktop": "workspace:*",
-    "cac": "catalog:cli"
+    "cac": "catalog:cli",
+    "consola": "catalog:build"
   },
   "devDependencies": {
     "@types/node": "catalog:types",

@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import process from 'node:process'
 import { bakeConfig, resolveDesktopConfig } from '../config/resolve'
 import { DesktopError } from '../error'
-import { log } from '../log'
+import { logger } from '../log'
 import { copyAssets } from '../shared/assets'
 import { getTemplateDir, resolveMainEntry } from '../shared/templates'
 import { bundleEntry, bundlePreload } from './bundle'
@@ -40,7 +40,7 @@ function rejectOnSpawnError(emitter: ChildProcess, label: string): Promise<never
  */
 export async function dev(options: DevOptions = {}): Promise<DevHandle> {
   const { resolved, warnings } = await resolveDesktopConfig(options.cwd)
-  for (const warning of warnings) log(warning)
+  for (const warning of warnings) logger.warn(warning)
   const root = resolved.root
   const url = options.url ?? resolved.dev.url
   const outDir = join(root, '.uni-desktop/dev')
@@ -48,7 +48,7 @@ export async function dev(options: DevOptions = {}): Promise<DevHandle> {
 
   const pm = detectPackageManager(root)
   const { cmd, args } = runCommand(pm, resolved.dev.command)
-  log(`starting \`${resolved.dev.command}\` via ${pm}...`)
+  logger.start(`starting \`${resolved.dev.command}\` via ${pm}...`)
   const server = spawn(cmd, args, {
     cwd: root,
     env: process.env,
@@ -70,11 +70,12 @@ export async function dev(options: DevOptions = {}): Promise<DevHandle> {
   // that rejection handled so Node does not turn it into an unhandled rejection.
   serverFailed.catch(() => {})
 
-  log(`waiting for the dev server at ${url}...`)
+  logger.info(`waiting for the dev server at ${url}...`)
   await Promise.race([
     waitUntilReady(url, { timeout: resolved.dev.waitTimeout, interval: resolved.dev.interval }),
     serverFailed,
   ])
+  logger.success(`dev server is ready at ${url}, launching electron...`)
 
   // The runtime resolves assets relative to `__dirname/../resources`, and dev
   // writes `main.cjs` directly into `outDir`, so assets live one level up.
@@ -98,10 +99,10 @@ export async function dev(options: DevOptions = {}): Promise<DevHandle> {
     })
     electronStarted = true
     electronProcess.once('exit', (code) => {
-      log(`electron exited with code ${code}`)
+      logger.info(`electron exited with code ${code}`)
     })
     rejectOnSpawnError(electronProcess, 'electron').catch((error: DesktopError) => {
-      log(error.message)
+      logger.error(error.message)
     })
   }
   async function restartElectron(): Promise<void> {

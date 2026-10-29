@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path'
 import process from 'node:process'
 import { applyEdits, modify, parse } from 'jsonc-parser'
 import { DesktopError } from '../error'
-import { log } from '../log'
+import { logger } from '../log'
 import { addCommand, detectPackageManager, spawnAwait } from '../orchestrate/pm'
 
 export interface InitOptions {
@@ -64,7 +64,7 @@ async function normalizeManifest(manifestPath: string): Promise<string | undefin
 
   if (next !== content) {
     await writeFile(manifestPath, next)
-    log('updated manifest.json (h5.router mode "hash", base "./")')
+    logger.success('updated manifest.json (h5.router mode "hash", base "./")')
   }
   return manifest.name
 }
@@ -77,7 +77,7 @@ async function ensureShimImport(mainPath: string): Promise<void> {
   if (content.includes('@uni-helper/desktop-shim'))
     return
   await writeFile(mainPath, `import '@uni-helper/desktop-shim'\n${content}`)
-  log('added the shim import to src/main.ts')
+  logger.success('added the shim import to src/main.ts')
 }
 
 async function ensureScripts(pkgPath: string): Promise<{ scripts?: Record<string, string>, dependencies?: Record<string, string>, devDependencies?: Record<string, string> }> {
@@ -93,7 +93,7 @@ async function ensureScripts(pkgPath: string): Promise<{ scripts?: Record<string
   pkg.scripts ??= {}
   for (const [name, command] of missing) pkg.scripts[name] = command
   await writeFile(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`)
-  log('added desktop:* scripts to package.json')
+  logger.success('added desktop:* scripts to package.json')
   return pkg
 }
 
@@ -124,7 +124,7 @@ export async function init(options: InitOptions = {}): Promise<void> {
   const configPath = join(root, 'unh.config.ts')
   if (!existsSync(configPath)) {
     await writeFile(configPath, configTemplate(appName ?? 'uni-app-desktop'))
-    log('created unh.config.ts')
+    logger.success('created unh.config.ts')
   }
 
   await ensureShimImport(join(root, 'src/main.ts'))
@@ -135,5 +135,5 @@ export async function init(options: InitOptions = {}): Promise<void> {
   if (options.install !== false)
     await installDependencies(root, pkg)
 
-  log('done. Run `desktop:dev` to start the app, `desktop:build` to package installers.')
+  logger.success('done. Run `desktop:dev` to start the app, `desktop:build` to package installers.')
 }

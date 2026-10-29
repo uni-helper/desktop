@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import process from 'node:process'
 import { bakeConfig, resolveDesktopConfig } from '../config/resolve'
 import { DesktopError } from '../error'
-import { log } from '../log'
+import { logger } from '../log'
 import { copyAssets } from '../shared/assets'
 import { APP_DIR } from '../shared/paths'
 import { getTemplateDir, resolveMainEntry } from '../shared/templates'
@@ -29,11 +29,11 @@ export interface BuildResult {
  */
 export async function build(options: BuildOptions = {}): Promise<BuildResult> {
   const { resolved, warnings } = await resolveDesktopConfig(options.cwd)
-  for (const warning of warnings) log(warning)
+  for (const warning of warnings) logger.warn(warning)
   const root = resolved.root
   const outDir = join(root, APP_DIR)
   const templateDir = getTemplateDir()
-  log('building the H5 bundle...')
+  logger.start('building the H5 bundle...')
 
   await rm(outDir, { recursive: true, force: true })
 
@@ -56,7 +56,7 @@ export async function build(options: BuildOptions = {}): Promise<BuildResult> {
   const assets = await copyAssets(resolved, outDir)
   const baked = bakeConfig(resolved, assets)
 
-  log('assembling the electron app...')
+  logger.start('assembling the electron app...')
   const electronDir = join(outDir, 'electron')
   await bundleEntry({
     entryPath: resolveMainEntry(root, resolved.mainEntry),
@@ -76,7 +76,7 @@ export async function build(options: BuildOptions = {}): Promise<BuildResult> {
     homepage: resolved.homepage,
   }, null, 2)}\n`)
 
-  log(`desktop app assembled at ${outDir}`)
+  logger.success(`desktop app assembled at ${outDir}`)
 
   const autoPack = options.pack ?? resolved.pack.autoPack
   if (autoPack)

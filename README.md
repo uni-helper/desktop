@@ -63,6 +63,8 @@ pnpm desktop:pack -- --publish always   # 额外参数原样透传给 electron-b
 
 安装包输出到 `dist/release`（可通过 `pack.output` 修改）。窗口/安装包图标通过 `app.icon` 指定，建议提供一张 512x512 以上的 PNG。
 
+命令行进度输出由 [consola](https://github.com/unjs/consola) 渲染：终端里按级别着色（`start` / `info` / `success` / `warn` / `error`），每行带 `[uni-desktop]` 标签，方便和 dev server、Electron 自身的输出区分；输出被重定向或运行在 CI 时自动退化为不带颜色的纯文本。
+
 ### 完整示例
 
 见 [examples/quick-start](./examples/quick-start)。
