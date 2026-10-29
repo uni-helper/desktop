@@ -1,3 +1,5 @@
+import process from 'node:process'
+
 /** Print an error from a command and return the process exit code. */
 export function printError(error: unknown): number {
   if (error instanceof Error && error.name === 'DesktopError') {

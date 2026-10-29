@@ -3,7 +3,7 @@ import { StaleGuardRecorder } from 'tsdown-stale-guard'
 
 export default defineConfig({
   entry: {
-    index: 'src/index.ts',
+    'index': 'src/index.ts',
     'runtime/index': 'src/runtime/index.ts',
   },
   external: ['electron', 'electron-updater'],

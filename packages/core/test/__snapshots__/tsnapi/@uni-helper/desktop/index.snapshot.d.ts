@@ -6,33 +6,17 @@ export interface BakedDesktopConfig {
   appName: string;
   appId: string;
   version: string;
-  window: {
-    title: string;
-    width: number;
-    height: number;
-    minWidth?: number;
-    minHeight?: number;
-    center: boolean;
-    resizable: boolean;
-    fullscreen: boolean;
-    frame: boolean;
-    titleBarStyle?: 'default' | 'hidden' | 'hiddenInset';
-    autoHideMenuBar: boolean;
-    backgroundColor?: string;
-    show: boolean;
-    alwaysOnTop: boolean;
-    kiosk: boolean;
-  };
+  window: ResolvedWindowConfig;
   dev: {
     openDevtools: boolean;
   };
   tray: {
-    iconPath?: string;
+    icon?: string;
     tooltip?: string;
-    menu?: DesktopTrayConfig['menu'];
+    menu?: DesktopTrayMenuItem[];
   } | false;
   updater: DesktopUpdaterConfig | false;
-  iconPath?: string;
+  icon?: string;
 }
 export interface BuildOptions {
   cwd?: string;
@@ -47,6 +31,9 @@ export interface DesktopAppConfig {
   version?: string;
   copyright?: string;
   icon?: string;
+  author?: string;
+  homepage?: string;
+  description?: string;
 }
 export interface DesktopBuildConfig {
   command?: string;
@@ -86,7 +73,7 @@ export interface DesktopPackConfig {
   publish?: Record<string, unknown> | Array<Record<string, unknown>>;
 }
 export interface DesktopTrayConfig {
-  icon: string;
+  icon?: string;
   tooltip?: string;
   menu?: DesktopTrayMenuItem[];
 }
@@ -120,7 +107,7 @@ export interface DesktopWindowConfig {
   kiosk?: boolean;
 }
 export interface DevHandle {
-  close(): Promise<void>;
+  close: () => Promise<void>;
 }
 export interface DevOptions {
   cwd?: string;
@@ -145,9 +132,15 @@ export interface ManifestInfo {
 }
 export interface PackOptions {
   cwd?: string;
+  args?: string[];
 }
 export interface PackResult {
   output: string;
+}
+export interface ProjectInfo {
+  author?: string;
+  homepage?: string;
+  description?: string;
 }
 export interface ResolvedConfig {
   root: string;
@@ -155,8 +148,11 @@ export interface ResolvedConfig {
   appId: string;
   version: string;
   copyright?: string;
+  author?: string;
+  homepage?: string;
+  description?: string;
   icon?: string;
-  window: DesktopWindowConfig;
+  window: ResolvedWindowConfig;
   dev: {
     url: string;
     command: string;
@@ -168,7 +164,7 @@ export interface ResolvedConfig {
     command: string;
   };
   tray: {
-    icon: string;
+    icon?: string;
     tooltip?: string;
     menu?: DesktopTrayMenuItem[];
   } | false;
@@ -189,10 +185,26 @@ export interface ResolvedConfig {
     publish?: Record<string, unknown> | Array<Record<string, unknown>>;
   };
 }
+export interface ResolveResult {
+  resolved: ResolvedConfig;
+  manifest: ManifestInfo | undefined;
+  userConfig: DesktopConfig | undefined;
+  warnings: string[];
+}
 export interface UnhConfig {
   desktop?: DesktopConfig;
   [key: string]: unknown;
 }
+// #endregion
+
+// #region Types
+export type ResolvedWindowConfig = Required<Omit<DesktopWindowConfig, 'titleBarStyle' | 'minWidth' | 'minHeight' | 'backgroundColor'>> & {
+  title: string;
+  minWidth?: number;
+  minHeight?: number;
+  titleBarStyle?: 'default' | 'hidden' | 'hiddenInset';
+  backgroundColor?: string;
+};
 // #endregion
 
 // #region Classes

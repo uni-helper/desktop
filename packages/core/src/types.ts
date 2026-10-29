@@ -7,8 +7,19 @@ export interface DesktopAppConfig {
   version?: string
   /** Copyright line rendered into installers */
   copyright?: string
-  /** Project-relative path to a PNG icon, at least 512x512 */
+  /**
+   * Project-relative path to a PNG icon, at least 512x512.
+   *
+   * The icon is copied next to the assembled app so it keeps working after
+   * packaging; it is used for the window, the tray fallback and installers.
+   */
   icon?: string
+  /** Author shown by Linux package managers, defaults to the project `package.json` author */
+  author?: string
+  /** Project homepage shown by Linux package managers, defaults to the project `package.json` homepage */
+  homepage?: string
+  /** Short description used by installers, defaults to the project `package.json` description */
+  description?: string
 }
 
 export interface DesktopWindowConfig {
@@ -27,6 +38,18 @@ export interface DesktopWindowConfig {
   show?: boolean
   alwaysOnTop?: boolean
   kiosk?: boolean
+}
+
+/**
+ * Window options with every optional field resolved. `BakedDesktopConfig` is
+ * derived from this type, so adding a window option only touches this file.
+ */
+export type ResolvedWindowConfig = Required<Omit<DesktopWindowConfig, 'titleBarStyle' | 'minWidth' | 'minHeight' | 'backgroundColor'>> & {
+  title: string
+  minWidth?: number
+  minHeight?: number
+  titleBarStyle?: 'default' | 'hidden' | 'hiddenInset'
+  backgroundColor?: string
 }
 
 export interface DesktopDevConfig {
@@ -55,8 +78,8 @@ export interface DesktopTrayMenuItem {
 }
 
 export interface DesktopTrayConfig {
-  /** Project-relative path to the tray icon */
-  icon: string
+  /** Project-relative path to the tray icon, defaults to `app.icon` */
+  icon?: string
   tooltip?: string
   menu?: DesktopTrayMenuItem[]
 }
@@ -77,7 +100,7 @@ export interface DesktopPackConfig {
   output?: string
   /** Pack the app into an asar archive, defaults to true */
   asar?: boolean
-  /** Per-platform installer targets, e.g. `{ win: ['nsis'], mac: ['dmg'], linux: ['AppImage', 'deb'] }` */
+  /** Per-platform installer targets, e.g. `{ win: ['nsis'], mac: ['dmg'] }` */
   targets?: {
     win?: string[]
     mac?: string[]

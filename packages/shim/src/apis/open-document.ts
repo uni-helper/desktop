@@ -1,7 +1,7 @@
+import type { UniOptions } from '../types'
 import { getBridge } from '../bridge'
 import { shimChannels } from '../channels'
 import { invokeUniApi } from '../result'
-import type { UniOptions } from '../types'
 
 const DESKTOP_FILE_PREFIX = 'desktop-file://'
 
@@ -17,11 +17,12 @@ export function patchOpenDocument(uni: Record<string, any>): void {
 
   uni.openDocument = (options: UniOptions = {}) => {
     const filePath = options.filePath
-    if (typeof filePath === 'string' && filePath.startsWith(DESKTOP_FILE_PREFIX))
+    if (typeof filePath === 'string' && filePath.startsWith(DESKTOP_FILE_PREFIX)) {
       return invokeUniApi('openDocument', options, async () => {
         await getBridge()!.invoke(shimChannels.openDocument, { filePath, fileType: options.fileType })
         return {}
       })
+    }
     return typeof original === 'function' ? original(options) : undefined
   }
 }

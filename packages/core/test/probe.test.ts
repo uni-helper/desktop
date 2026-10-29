@@ -1,5 +1,5 @@
-import { createServer } from 'node:http'
 import type { AddressInfo, Server } from 'node:net'
+import { createServer } from 'node:http'
 import { afterAll, describe, expect, it } from 'vitest'
 import { waitUntilReady } from '../src/orchestrate/probe'
 

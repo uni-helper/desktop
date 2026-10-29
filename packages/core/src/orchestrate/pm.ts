@@ -1,6 +1,7 @@
-import { existsSync } from 'node:fs'
 import { spawn } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
+import process from 'node:process'
 import { DesktopError } from '../error'
 
 export type PackageManager = 'pnpm' | 'npm' | 'yarn' | 'bun'

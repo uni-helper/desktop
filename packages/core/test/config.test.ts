@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile, mkdir } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
@@ -129,6 +129,61 @@ export default defineConfig({ desktop: { window: { title: 'TS Title' } } })`,
     expect(resolved.pack.autoPack).toBe(true)
   })
 
+  it('bakes asset file names instead of absolute paths', async () => {
+    const root = await createProject({
+      'src/manifest.json': JSON.stringify({ name: 'app' }),
+      'static/logo.png': 'png',
+      'static/tray.png': 'png',
+      'unh.config.json': JSON.stringify({
+        desktop: {
+          app: { icon: 'static/logo.png' },
+          tray: { icon: 'static/tray.png' },
+        },
+      }),
+    })
+
+    const { resolved } = await resolveDesktopConfig(root)
+    const baked = bakeConfig(resolved, { icon: 'icon.png', trayIcon: 'tray-icon.png' })
+
+    expect(baked.icon).toBe('icon.png')
+    expect(baked.tray).toMatchObject({ icon: 'tray-icon.png' })
+    expect(JSON.stringify(baked)).not.toContain(root)
+  })
+
+  it('defaults the tray icon to the app icon', async () => {
+    const root = await createProject({
+      'src/manifest.json': JSON.stringify({ name: 'app' }),
+      'static/logo.png': 'png',
+      'unh.config.json': JSON.stringify({
+        desktop: {
+          app: { icon: 'static/logo.png' },
+          tray: { tooltip: 'Tray' },
+        },
+      }),
+    })
+
+    const { resolved } = await resolveDesktopConfig(root)
+
+    expect(resolved.tray).toMatchObject({ icon: 'static/logo.png' })
+  })
+
+  it('fills installer metadata from the project package.json', async () => {
+    const root = await createProject({
+      'src/manifest.json': JSON.stringify({ name: 'app' }),
+      'package.json': JSON.stringify({
+        author: 'Example <dev@example.com>',
+        homepage: 'https://example.com',
+        description: 'Example app',
+      }),
+    })
+
+    const { resolved } = await resolveDesktopConfig(root)
+
+    expect(resolved.author).toBe('Example <dev@example.com>')
+    expect(resolved.homepage).toBe('https://example.com')
+    expect(resolved.description).toBe('Example app')
+  })
+
   it('bakes a serializable config', async () => {
     const root = await createProject({
       'src/manifest.json': JSON.stringify({ name: 'app', h5: { title: 'Baked' } }),
@@ -141,7 +196,9 @@ export default defineConfig({ desktop: { window: { title: 'TS Title' } } })`,
 
     expect(baked.appName).toBe('app')
     expect(baked.window).toMatchObject({ title: 'Baked', width: 420, height: 760, center: true })
-    expect(baked.tray).toMatchObject({ iconPath: join(root, 'static/tray.png') })
+    // Only file names cross the boundary: absolute paths would break once the
+    // assembled app directory is moved by electron-builder.
+    expect(baked.tray).toMatchObject({ icon: undefined })
     expect(baked.updater).toBe(false)
     expect(JSON.parse(JSON.stringify(baked))).toEqual(baked)
   })

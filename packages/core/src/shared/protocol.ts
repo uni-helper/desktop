@@ -18,7 +18,8 @@ export function parseDesktopFileUrl(url: string): string {
   return decodeURIComponent(encoded)
 }
 
-const MIME_TYPES: Record<string, string> = {
+/** Single source of truth for the media types the shim can round-trip. */
+const MIME_BY_EXTENSION: Record<string, string> = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
@@ -36,6 +37,11 @@ const MIME_TYPES: Record<string, string> = {
   '.zip': 'application/zip',
 }
 
+/** Reverse lookup derived from the same table, so the two can never drift. */
+export const EXTENSION_BY_MIME: Record<string, string> = Object.fromEntries(
+  Object.entries(MIME_BY_EXTENSION).map(([extension, mime]) => [mime, extension]),
+)
+
 export function mimeFromExtension(filePath: string): string {
-  return MIME_TYPES[extname(filePath).toLowerCase()] ?? 'application/octet-stream'
+  return MIME_BY_EXTENSION[extname(filePath).toLowerCase()] ?? 'application/octet-stream'
 }

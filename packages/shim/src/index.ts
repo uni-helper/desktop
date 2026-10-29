@@ -2,4 +2,4 @@ import { installDesktopShim } from './install'
 
 installDesktopShim()
 
-export { allShimChannels, shimChannels, type ShimChannel } from './channels'
+export { allShimChannels, type ShimChannel, shimChannels } from './channels'

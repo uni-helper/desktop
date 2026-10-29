@@ -11,3 +11,7 @@ export declare function toDesktopFileUrl(_: string): string;
 // #region Variables
 export declare const DESKTOP_FILE_SCHEME: string;
 // #endregion
+
+// #region Other
+export { BakedDesktopConfig }
+// #endregion

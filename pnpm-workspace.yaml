@@ -33,6 +33,7 @@ catalogs:
     skills: ^1.7.2
   build:
     esbuild: ^0.28.0
+    jsonc-parser: ^3.3.1
     unconfig: ^7.5.0
   cli:
     '@antfu/eslint-config': ^9.5.1

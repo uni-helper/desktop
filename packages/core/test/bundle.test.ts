@@ -1,14 +1,15 @@
+import type { BakedDesktopConfig } from '../src/baked'
 import { mkdir, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { bundleEntry, bundlePreload } from '../src/orchestrate/bundle'
-import type { BakedDesktopConfig } from '../src/baked'
 
 const outDir = join(tmpdir(), `uni-desktop-bundle-${Date.now()}`)
 const templateDir = fileURLToPath(new URL('../src/templates', import.meta.url))
 const shimSource = fileURLToPath(new URL('../../shim/src/index.ts', import.meta.url))
+const shimChannelsSource = fileURLToPath(new URL('../../shim/src/channels.ts', import.meta.url))
 
 const baked: BakedDesktopConfig = {
   appName: 'bake-test-app',
@@ -47,7 +48,7 @@ describe('bundleEntry', () => {
       entryPath: join(templateDir, 'main.ts'),
       outDir,
       baked,
-      alias: { '@uni-helper/desktop-shim': shimSource },
+      alias: { '@uni-helper/desktop-shim': shimSource, '@uni-helper/desktop-shim/channels': shimChannelsSource },
     })
 
     const output = await readFile(join(outDir, 'main.cjs'), 'utf8')
@@ -62,7 +63,7 @@ describe('bundleEntry', () => {
       entryPath: join(templateDir, 'main.ts'),
       outDir,
       baked,
-      alias: { '@uni-helper/desktop-shim': shimSource },
+      alias: { '@uni-helper/desktop-shim': shimSource, '@uni-helper/desktop-shim/channels': shimChannelsSource },
     })
 
     const output = await readFile(join(outDir, 'main.cjs'), 'utf8')
@@ -75,7 +76,7 @@ describe('bundlePreload', () => {
     await bundlePreload({
       templateDir,
       outDir,
-      alias: { '@uni-helper/desktop-shim': shimSource },
+      alias: { '@uni-helper/desktop-shim': shimSource, '@uni-helper/desktop-shim/channels': shimChannelsSource },
     })
 
     const output = await readFile(join(outDir, 'preload.cjs'), 'utf8')

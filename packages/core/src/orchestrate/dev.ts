@@ -1,12 +1,13 @@
+import type { ChildProcess } from 'node:child_process'
 import { spawn } from 'node:child_process'
 import { rm } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import type { ChildProcess } from 'node:child_process'
-import type { BuildContext } from 'esbuild'
+import { join } from 'node:path'
+import process from 'node:process'
 import { bakeConfig, resolveDesktopConfig } from '../config/resolve'
 import { DesktopError } from '../error'
 import { log } from '../log'
+import { copyAssets } from '../shared/assets'
+import { getTemplateDir, resolveMainEntry } from '../shared/templates'
 import { bundleEntry, bundlePreload } from './bundle'
 import { killTree, resolveElectronBinary } from './electron'
 import { detectPackageManager, runCommand } from './pm'
@@ -20,16 +21,16 @@ export interface DevOptions {
 }
 
 export interface DevHandle {
-  close(): Promise<void>
+  close: () => Promise<void>
 }
 
-/** Directory holding the shipped `main.ts` / `preload.ts` templates. */
-export function getTemplateDir(): string {
-  return join(dirname(fileURLToPath(import.meta.url)), 'templates')
-}
-
-function resolveMainEntryPath(root: string, mainEntry: string | undefined, templateDir: string): string {
-  return mainEntry ? join(root, mainEntry) : join(templateDir, 'main.ts')
+/** Attach the error listener spawn needs so a missing binary rejects instead of crashing. */
+function rejectOnSpawnError(emitter: ChildProcess, label: string): Promise<never> {
+  return new Promise<never>((_, reject) => {
+    emitter.once('error', (error) => {
+      reject(new DesktopError(`failed to start ${label}: ${error.message}`))
+    })
+  })
 }
 
 /**
@@ -54,11 +55,20 @@ export async function dev(options: DevOptions = {}): Promise<DevHandle> {
     stdio: 'inherit',
     detached: process.platform !== 'win32',
   })
-  const serverFailed = new Promise<never>((_, reject) => {
-    server.once('exit', (code) => {
-      reject(new DesktopError(`\`${resolved.dev.command}\` exited with code ${code} before the dev server became ready at ${url}`))
-    })
-  })
+
+  // Without an `error` listener a missing executable crashes the process with
+  // an uncaught ENOENT instead of a readable message.
+  const serverFailed = Promise.race([
+    rejectOnSpawnError(server, `\`${resolved.dev.command}\``),
+    new Promise<never>((_, reject) => {
+      server.once('exit', (code) => {
+        reject(new DesktopError(`\`${resolved.dev.command}\` exited with code ${code} before the dev server became ready at ${url}`))
+      })
+    }),
+  ])
+  // `serverFailed` may settle after the race below has already been won; keep
+  // that rejection handled so Node does not turn it into an unhandled rejection.
+  serverFailed.catch(() => {})
 
   log(`waiting for the dev server at ${url}...`)
   await Promise.race([
@@ -66,8 +76,12 @@ export async function dev(options: DevOptions = {}): Promise<DevHandle> {
     serverFailed,
   ])
 
+  // The runtime resolves assets relative to `__dirname/../resources`, and dev
+  // writes `main.cjs` directly into `outDir`, so assets live one level up.
   await rm(outDir, { recursive: true, force: true })
-  const baked = bakeConfig(resolved)
+  const assetsDir = join(outDir, '..')
+  await rm(join(assetsDir, 'resources'), { recursive: true, force: true })
+  const baked = bakeConfig(resolved, await copyAssets(resolved, assetsDir))
 
   // Declared before the watcher starts: esbuild fires `onRebuild` for the
   // initial build as soon as `watch()` resolves, which can race ahead of the
@@ -86,17 +100,19 @@ export async function dev(options: DevOptions = {}): Promise<DevHandle> {
     electronProcess.once('exit', (code) => {
       log(`electron exited with code ${code}`)
     })
+    rejectOnSpawnError(electronProcess, 'electron').catch((error: DesktopError) => {
+      log(error.message)
+    })
   }
   async function restartElectron(): Promise<void> {
     if (!electronStarted)
       return
-    killTree(electronProcess)
-    await new Promise(resolvePromise => setTimeout(resolvePromise, 100))
+    await killTree(electronProcess)
     spawnElectron()
   }
 
   const watcher = await bundleEntry({
-    entryPath: resolveMainEntryPath(root, resolved.mainEntry, templateDir),
+    entryPath: resolveMainEntry(root, resolved.mainEntry),
     outDir,
     baked,
     watch: true,
@@ -111,9 +127,7 @@ export async function dev(options: DevOptions = {}): Promise<DevHandle> {
       if (closed)
         return
       closed = true
-      killTree(electronProcess)
-      killTree(server)
-      await watcher?.dispose()
+      await Promise.all([killTree(electronProcess), killTree(server), watcher?.dispose()])
     },
   }
 }

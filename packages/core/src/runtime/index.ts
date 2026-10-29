@@ -1,13 +1,15 @@
-import { existsSync } from 'node:fs'
-import { mkdir, readFile, readdir, realpath, stat, unlink, writeFile } from 'node:fs/promises'
-import { randomUUID } from 'node:crypto'
-import { extname, join, sep } from 'node:path'
-import { app, BrowserWindow, Menu, ipcMain, protocol, shell, Tray } from 'electron'
 import type { MenuItemConstructorOptions } from 'electron'
 import type { BakedDesktopConfig } from '../baked'
-import { shimChannels } from '@uni-helper/desktop-shim'
-import { DESKTOP_FILE_SCHEME, mimeFromExtension, parseDesktopFileUrl, toDesktopFileUrl } from '../shared/protocol'
+import { randomUUID } from 'node:crypto'
+import { existsSync } from 'node:fs'
+import { mkdir, readdir, readFile, realpath, stat, unlink, writeFile } from 'node:fs/promises'
+import { join, sep } from 'node:path'
+import process from 'node:process'
+import { shimChannels } from '@uni-helper/desktop-shim/channels'
+import { app, BrowserWindow, ipcMain, Menu, protocol, shell, Tray } from 'electron'
+import { DESKTOP_FILE_SCHEME, EXTENSION_BY_MIME, mimeFromExtension, parseDesktopFileUrl, toDesktopFileUrl } from '../shared/protocol'
 
+export type { BakedDesktopConfig } from '../baked'
 export { DESKTOP_FILE_SCHEME, parseDesktopFileUrl, toDesktopFileUrl }
 
 let mainWindow: BrowserWindow | null = null
@@ -20,16 +22,38 @@ function savedRoot(): string {
   return join(app.getPath('userData'), 'uni-desktop-files')
 }
 
+/**
+ * Directory holding the assets baked into the app (`icon.png`,
+ * `tray-icon.png`). In dev that is the assembled app directory; once packaged
+ * electron-builder moves the same files into `resources/`.
+ */
+function assetsRoot(): string {
+  return join(__dirname, '..', 'resources')
+}
+
+function assetPath(fileName: string | undefined): string | undefined {
+  if (!fileName)
+    return undefined
+  const candidate = join(assetsRoot(), fileName)
+  return existsSync(candidate) ? candidate : undefined
+}
+
 function isInsideRoots(resolved: string, roots: string[]): boolean {
   return roots.some(root => resolved === root || resolved.startsWith(root + sep))
 }
 
+/**
+ * Resolve a renderer-supplied path to a real path inside one of the managed
+ * roots. The roots are realpath-ed too, otherwise a symlinked home directory
+ * would make every legitimate path look like it escaped containment.
+ */
 async function pathFromManagedValue(value: unknown, roots: string[], label: string): Promise<string> {
   if (typeof value !== 'string' || !value)
     throw new TypeError(`${label} is required`)
   const raw = value.startsWith(`${DESKTOP_FILE_SCHEME}://`) ? parseDesktopFileUrl(value) : value
   const resolved = await realpath(raw)
-  if (!isInsideRoots(resolved, roots))
+  const realRoots = await Promise.all(roots.map(root => realpath(root).catch(() => root)))
+  if (!isInsideRoots(resolved, realRoots))
     throw new Error(`${label} is outside the managed directories`)
   return resolved
 }
@@ -53,8 +77,9 @@ function registerDesktopFileProtocol(): void {
 
 async function serveDesktopFileRequest(request: Request): Promise<Response> {
   try {
+    const root = await realpath(savedRoot())
     const resolved = await realpath(parseDesktopFileUrl(request.url))
-    if (!isInsideRoots(resolved, [savedRoot()]))
+    if (!isInsideRoots(resolved, [root]))
       return new Response('forbidden', { status: 403 })
     const data = await readFile(resolved)
     return new Response(new Uint8Array(data), { headers: { 'content-type': mimeFromExtension(resolved) } })
@@ -64,36 +89,20 @@ async function serveDesktopFileRequest(request: Request): Promise<Response> {
   }
 }
 
-const EXTENSION_BY_MIME: Record<string, string> = {
-  'image/png': '.png',
-  'image/jpeg': '.jpg',
-  'image/gif': '.gif',
-  'image/webp': '.webp',
-  'image/bmp': '.bmp',
-  'image/svg+xml': '.svg',
-  'video/mp4': '.mp4',
-  'video/webm': '.webm',
-  'video/quicktime': '.mov',
-  'video/x-m4v': '.m4v',
-  'application/pdf': '.pdf',
-  'text/plain': '.txt',
-  'application/json': '.json',
-  'application/zip': '.zip',
-}
-
 function registerIpcHandlers(): void {
   // The renderer sends bytes because uni-h5 hands out `blob:` temp paths,
-  // which the main process cannot resolve on its own.
+  // which the main process cannot resolve on its own. `bytes` is an ArrayBuffer
+  // transferred over IPC, so large files never become a base64 string.
   ipcMain.handle(shimChannels.saveFile, async (_event, payload) => {
     const data = assertObjectPayload(payload)
-    const base64 = data.base64
-    if (typeof base64 !== 'string' || !base64)
-      throw new TypeError('base64 must be a string')
+    const bytes = data.bytes
+    if (!(bytes instanceof Uint8Array) && !(bytes instanceof ArrayBuffer))
+      throw new TypeError('bytes must be a Uint8Array or ArrayBuffer')
     const mime = typeof data.mime === 'string' ? data.mime : undefined
     const extension = mime ? EXTENSION_BY_MIME[mime] ?? '' : ''
     await mkdir(savedRoot(), { recursive: true })
     const target = join(savedRoot(), `${randomUUID()}${extension}`)
-    await writeFile(target, Buffer.from(base64, 'base64'))
+    await writeFile(target, bytes instanceof ArrayBuffer ? new Uint8Array(bytes) : bytes)
     return { savedFilePath: toDesktopFileUrl(target) }
   })
 
@@ -132,12 +141,37 @@ function registerIpcHandlers(): void {
   })
 }
 
+/**
+ * Keep the renderer on app-owned content: external links open in the system
+ * browser and nothing can navigate the window away from the app. Without this
+ * the preload bridge (and therefore the file IPC) would be handed to any
+ * remote page the renderer navigates to.
+ */
+function hardenNavigation(window: BrowserWindow, devUrl: string | undefined): void {
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    if (devUrl && url.startsWith(devUrl))
+      return { action: 'allow' }
+    void shell.openExternal(url)
+    return { action: 'deny' }
+  })
+
+  window.webContents.on('will-navigate', (event, url) => {
+    if (devUrl && url.startsWith(devUrl))
+      return
+    if (!devUrl && url.startsWith('file://'))
+      return
+    event.preventDefault()
+    void shell.openExternal(url)
+  })
+}
+
 function createMainWindow(baked: BakedDesktopConfig): BrowserWindow {
   if (mainWindow) {
     mainWindow.focus()
     return mainWindow
   }
   const window = baked.window
+  const devUrl = process.env.DESKTOP_DEV_URL
   mainWindow = new BrowserWindow({
     title: window.title,
     width: window.width,
@@ -154,7 +188,7 @@ function createMainWindow(baked: BakedDesktopConfig): BrowserWindow {
     show: window.show,
     alwaysOnTop: window.alwaysOnTop,
     kiosk: window.kiosk,
-    icon: baked.iconPath && existsSync(baked.iconPath) ? baked.iconPath : undefined,
+    icon: assetPath(baked.icon),
     webPreferences: {
       preload: join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -162,7 +196,8 @@ function createMainWindow(baked: BakedDesktopConfig): BrowserWindow {
     },
   })
 
-  const devUrl = process.env.DESKTOP_DEV_URL
+  hardenNavigation(mainWindow, devUrl)
+
   if (devUrl)
     void mainWindow.loadURL(devUrl)
   else
@@ -179,20 +214,21 @@ function createMainWindow(baked: BakedDesktopConfig): BrowserWindow {
 
 function setupTray(baked: BakedDesktopConfig): void {
   const trayConfig = baked.tray ? baked.tray : undefined
-  if (!trayConfig?.iconPath)
+  const iconPath = assetPath(trayConfig?.icon)
+  if (!iconPath)
     return
   try {
-    const tray = new Tray(trayConfig.iconPath)
-    if (trayConfig.tooltip)
+    const tray = new Tray(iconPath)
+    if (trayConfig?.tooltip)
       tray.setToolTip(trayConfig.tooltip)
-    const template: MenuItemConstructorOptions[] = (trayConfig.menu ?? [{ role: 'quit' }]).map(item => ({
+    const template: MenuItemConstructorOptions[] = (trayConfig?.menu ?? [{ role: 'quit' }]).map(item => ({
       label: item.label,
       role: item.role as MenuItemConstructorOptions['role'],
       enabled: item.enabled,
       visible: item.visible,
     }))
     tray.setContextMenu(Menu.buildFromTemplate(template))
-    tray.on('click', () => mainWindow?.show())
+    tray.on('click', () => getMainWindow()?.show())
   }
   catch (error) {
     console.warn('[uni-desktop] failed to create tray:', error)
@@ -226,6 +262,22 @@ async function setupUpdater(baked: BakedDesktopConfig): Promise<void> {
 export function createDesktopApp(baked: BakedDesktopConfig): void {
   registerDesktopFileProtocol()
   registerIpcHandlers()
+
+  // A desktop app is single-instance: a second launch focuses the running
+  // window instead of starting a second copy of the app.
+  if (!app.requestSingleInstanceLock()) {
+    app.quit()
+    return
+  }
+
+  app.on('second-instance', () => {
+    const window = getMainWindow()
+    if (!window)
+      return
+    if (window.isMinimized())
+      window.restore()
+    window.focus()
+  })
 
   void app.whenReady().then(async () => {
     protocol.handle(DESKTOP_FILE_SCHEME, serveDesktopFileRequest)

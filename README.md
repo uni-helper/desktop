@@ -9,7 +9,7 @@
 ## 特性
 
 - **`uni-desktop dev`**：启动 H5 dev server，就绪后自动打开 Electron 窗口加载它，渲染进程走 Vite 热更新，主进程改动自动重启窗口
-- **`uni-desktop build`**：构建 H5 产物，组装成 Electron 应用目录（`dist/desktop`），再用 electron-builder 生成 Windows（NSIS）/ macOS（dmg）/ Linux（AppImage、deb）安装包
+- **`uni-desktop build`**：构建 H5 产物，组装成 Electron 应用目录（`dist/desktop`），再用 electron-builder 生成 Windows（NSIS）/ macOS（dmg）/ Linux（AppImage）安装包
 - **`uni-desktop pack`**：对已组装的 `dist/desktop` 单独打包
 - **`uni-desktop init`**：脚手架 `unh.config.ts`、规范化 manifest.json（hash 路由 + 相对 base）、安装依赖
 - **uni API 垫片**：只补 H5 端没有实现的内置 API（`uni.saveFile` / `getSavedFileList` / `getSavedFileInfo` / `removeSavedFile`），外加 `openDocument` 对 `desktop-file://` 的桥接；H5 已实现的 API 一律沿用 uni-h5 原版，纯浏览器环境整体 no-op
@@ -53,9 +53,13 @@ dev server 就绪后 Electron 窗口自动打开，正常使用 Vite 热更新�
 
 ```sh
 pnpm desktop:build          # H5 构建 + 组装 dist/desktop + electron-builder 打包
-pnpm desktop:build -- --no-pack   # 只组装，不出安装包
+pnpm desktop:build -- --no-pack   # 只组装，不出安装包（覆盖 pack.autoPack）
+pnpm desktop:build -- --pack      # 强制打包（覆盖 pack.autoPack: false）
 pnpm desktop:pack           # 对已有 dist/desktop 单独打包
+pnpm desktop:pack -- --publish always   # 额外参数原样透传给 electron-builder
 ```
+
+`electron` 的版本会从项目自身的依赖中读取并写入 electron-builder 配置（`electronVersion`），因此不必在 `package.json` 里把版本写死。Linux 的 `deb` 目标额外要求 `app.author` 与 `app.homepage`，两者默认从项目 `package.json` 的 `author` / `homepage` 读取。
 
 安装包输出到 `dist/release`（可通过 `pack.output` 修改）。窗口/安装包图标通过 `app.icon` 指定，建议提供一张 512x512 以上的 PNG。
 
@@ -73,10 +77,10 @@ import { defineConfig } from '@uni-helper/desktop'
 export default defineConfig({
   desktop: {
     app: {
-      name: 'my-app',              // 默认取 manifest.json 的 name
+      name: 'my-app', // 默认取 manifest.json 的 name
       appId: 'com.example.my-app', // 默认派生自 name
-      version: '1.0.0',            // 默认取 manifest.json 的 versionName
-      icon: 'static/logo.png',     // 512x512+ PNG
+      version: '1.0.0', // 默认取 manifest.json 的 versionName
+      icon: 'static/logo.png', // 512x512+ PNG，窗口/托盘/安装包共用
       copyright: '© 2026 Example',
     },
     window: {
@@ -94,36 +98,36 @@ export default defineConfig({
     },
     dev: {
       url: 'http://localhost:5173', // Electron 在 dev 模式加载的地址
-      command: 'dev:h5',            // 启动 H5 dev server 的 npm script
-      waitTimeout: 60000,           // 等待 URL 可访问的超时
-      interval: 500,                // 探测间隔
-      openDevtools: true,           // 自动打开 DevTools
+      command: 'dev:h5', // 启动 H5 dev server 的 npm script
+      waitTimeout: 60000, // 等待 URL 可访问的超时
+      interval: 500, // 探测间隔
+      openDevtools: true, // 自动打开 DevTools
     },
     build: {
-      command: 'build:h5',          // 构建 H5 的 npm script
+      command: 'build:h5', // 构建 H5 的 npm script
     },
-    tray: {                         // 设为 false 关闭托盘
-      icon: 'static/tray.png',
+    tray: { // 设为 false 关闭托盘
+      icon: 'static/tray.png', // 省略时回退到 app.icon
       tooltip: 'My App',
       menu: [{ role: 'quit' }],
     },
-    updater: {                      // 设为 false 关闭自动更新
+    updater: { // 设为 false 关闭自动更新
       provider: 'generic',
       url: 'https://example.com/updates/',
       autoDownload: true,
       autoInstallOnAppQuit: true,
     },
     main: {
-      entry: 'desktop/main.ts',     // 自定义主进程入口（可选）
+      entry: 'desktop/main.ts', // 自定义主进程入口（可选）
     },
     pack: {
-      autoPack: true,               // build 后自动运行 electron-builder
+      autoPack: true, // build 后自动运行 electron-builder
       output: 'dist/release',
       asar: true,
       targets: {
         win: ['nsis'],
         mac: ['dmg'],
-        linux: ['AppImage', 'deb'],
+        linux: ['AppImage'], // deb 需要 app.author / app.homepage，默认不开启
       },
       nsis: { oneClick: false },
       publish: { provider: 'generic', url: 'https://example.com/updates/' },
@@ -133,6 +137,8 @@ export default defineConfig({
 ```
 
 `unh.config.ts` 由 [unconfig](https://github.com/unocss/unocss/tree/main/packages/unconfig) 加载，因此 `unh.config.{ts,mts,js,mjs,cjs,json}` 都可以使用。`desktop` 之外的顶层键会被忽略，留给其他工具消费。
+
+`manifest.json` 由 `jsonc-parser` 解析（与 uni-app 自身一致），因此 `init` 在补全 `h5.router` 时会保留注释与尾逗号。
 
 所有字段都是可选的，未配置的值按 `defaults < manifest.json < unh.config.ts 的 desktop` 合并。
 
@@ -156,7 +162,7 @@ export default defineConfig({
 
 `uni.chooseImage` / `chooseVideo` / `chooseFile` 沿用 H5 实现，返回的 `tempFilePath` 是 `blob:` URL。`uni.saveFile` 会在渲染端读取该 URL 的字节并发送给主进程落盘，因此 `tempFilePath` 必须是当前页面仍然有效的选择结果（刷新后失效）。
 
-保存后的 `savedFilePath` 形如 `desktop-file://f/<绝对路径>`，由自定义协议提供给渲染进程加载，并严格限制在应用管理目录内。`uni.getSavedFileList` / `getSavedFileInfo` / `removeSavedFile` / `openDocument` 只接受该目录内的路径。
+保存后的 `savedFilePath` 形如 `desktop-file://f/<绝对路径>`，由自定义协议提供给渲染进程加载，并严格限制在应用管理目录内。文件字节以 `Uint8Array` 形式通过 IPC 传输（不再转 base64），大文件不会额外占用数倍内存。`uni.getSavedFileList` / `getSavedFileInfo` / `removeSavedFile` / `openDocument` 只接受该目录内的路径。
 
 所有垫片 API 同时支持回调风格与 Promise 风格，错误遵循 `errMsg: 'xxx:fail ...'` 约定。在纯浏览器环境打开时垫片整体 no-op。
 
@@ -178,7 +184,13 @@ declare const __DESKTOP_CONFIG__: BakedDesktopConfig
 createDesktopApp(__DESKTOP_CONFIG__)
 ```
 
-`createDesktopApp` 内部处理：窗口创建与加载（dev URL 或打包后的 web/index.html）、全部垫片 IPC handler、`desktop-file://` 协议、托盘与自动更新。也可以完全不使用它，自己写 Electron 主进程。
+`createDesktopApp` 内部处理：窗口创建与加载（dev URL 或打包后的 web/index.html）、全部垫片 IPC handler、`desktop-file://` 协议、托盘与自动更新，另外还有：
+
+- 单实例锁：重复启动会聚焦已有窗口，而不是再开一个进程
+- 导航加固：外部链接交给系统浏览器，窗口不会被渲染进程导航到任意站点（否则 preload 桥会被带到远程页面）
+- 图标路径按组装后的目录解析，安装到用户机器后依然有效
+
+也可以完全不使用它，自己写 Electron 主进程。
 
 ## 包结构
 
@@ -190,11 +202,11 @@ createDesktopApp(__DESKTOP_CONFIG__)
 
 ## License
 
-[MIT](./LICENSE) License © [FliPPeDround](https://github.com/flippedround)
+[MIT](./LICENSE.md) License © [FliPPeDround](https://github.com/flippedround)
 
 [npm-version-src]: https://img.shields.io/npm/v/@uni-helper/desktop?style=flat-square
 [npm-version-href]: https://npmjs.com/package/@uni-helper/desktop
 [npm-downloads-src]: https://img.shields.io/npm/dm/@uni-helper/desktop?style=flat-square
 [npm-downloads-href]: https://npmjs.com/package/@uni-helper/desktop
 [license-src]: https://img.shields.io/github/license/uni-helper/desktop.svg?style=flat-square
-[license-href]: https://github.com/uni-helper/desktop/blob/main/LICENSE
+[license-href]: https://github.com/uni-helper/desktop/blob/main/LICENSE.md

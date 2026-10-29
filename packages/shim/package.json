@@ -23,6 +23,7 @@
   "sideEffects": true,
   "exports": {
     ".": "./dist/index.mjs",
+    "./channels": "./dist/channels.mjs",
     "./package.json": "./package.json"
   },
   "files": [

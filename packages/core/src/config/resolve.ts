@@ -1,9 +1,11 @@
+import type { BakedDesktopConfig } from '../baked'
+import type { DesktopConfig, DesktopTrayMenuItem, DesktopUpdaterConfig, DesktopWindowConfig, ResolvedWindowConfig, UnhConfig } from '../types'
 import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
+import process from 'node:process'
 import { loadConfig } from 'unconfig'
-import type { BakedDesktopConfig } from '../baked'
-import type { DesktopConfig, DesktopTrayMenuItem, DesktopUpdaterConfig, DesktopWindowConfig, UnhConfig } from '../types'
+import { DesktopError } from '../error'
 
 export interface ManifestInfo {
   name?: string
@@ -19,15 +21,28 @@ export interface ManifestInfo {
   }
 }
 
+/** Metadata read from the project `package.json`, used to fill installer fields. */
+export interface ProjectInfo {
+  author?: string
+  homepage?: string
+  description?: string
+}
+
 export interface ResolvedConfig {
   root: string
   appName: string
   appId: string
   version: string
   copyright?: string
+  /** Author shown by Linux package managers */
+  author?: string
+  /** Project homepage shown by Linux package managers */
+  homepage?: string
+  /** Short description used by installers */
+  description?: string
   /** Project-relative icon path, when the file exists */
   icon?: string
-  window: DesktopWindowConfig
+  window: ResolvedWindowConfig
   dev: {
     url: string
     command: string
@@ -39,7 +54,8 @@ export interface ResolvedConfig {
     command: string
   }
   tray: {
-    icon: string
+    /** Project-relative tray icon path; falls back to `icon` */
+    icon?: string
     tooltip?: string
     menu?: DesktopTrayMenuItem[]
   } | false
@@ -58,11 +74,58 @@ export interface ResolvedConfig {
   }
 }
 
+const DEFAULT_WINDOW: ResolvedWindowConfig = {
+  title: '',
+  width: 420,
+  height: 760,
+  center: true,
+  resizable: true,
+  fullscreen: false,
+  frame: true,
+  autoHideMenuBar: true,
+  show: true,
+  alwaysOnTop: false,
+  kiosk: false,
+}
+
+/** Resolve a window config against the defaults, dropping undefined overrides. */
+function resolveWindow(config: DesktopWindowConfig | undefined, fallbackTitle: string): ResolvedWindowConfig {
+  const merged: ResolvedWindowConfig = {
+    ...DEFAULT_WINDOW,
+    ...stripUndefined(config),
+    title: config?.title ?? fallbackTitle,
+  }
+  return merged
+}
+
+function stripUndefined<T extends object>(value: T | undefined): Partial<T> {
+  if (!value)
+    return {}
+  return Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined)) as Partial<T>
+}
+
 async function readManifest(root: string): Promise<ManifestInfo | undefined> {
   const file = join(root, 'src/manifest.json')
   if (!existsSync(file))
     return undefined
   return JSON.parse(await readFile(file, 'utf8')) as ManifestInfo
+}
+
+async function readProjectInfo(root: string): Promise<ProjectInfo> {
+  const file = join(root, 'package.json')
+  if (!existsSync(file))
+    return {}
+  const pkg = JSON.parse(await readFile(file, 'utf8')) as {
+    author?: string | { name?: string, email?: string }
+    homepage?: string
+    description?: string
+  }
+  const author = typeof pkg.author === 'string'
+    ? pkg.author
+    : pkg.author
+      ? [pkg.author.name, pkg.author.email && `<${pkg.author.email}>`].filter(Boolean).join(' ')
+      : undefined
+  return { author, homepage: pkg.homepage, description: pkg.description }
 }
 
 function sanitizeBundleIdPart(value: string): string {
@@ -73,35 +136,22 @@ function buildAppId(appName: string): string {
   return `desktop.uniapp.${sanitizeBundleIdPart(appName)}`
 }
 
-export function normalizeConfig(config: DesktopConfig, manifest: ManifestInfo | undefined, root: string): ResolvedConfig {
+export function normalizeConfig(
+  config: DesktopConfig,
+  manifest: ManifestInfo | undefined,
+  root: string,
+  project: ProjectInfo = {},
+): ResolvedConfig {
   const appName = config.app?.name ?? manifest?.name ?? 'uni-app-desktop'
-  const window: DesktopWindowConfig = {
-    title: config.window?.title ?? manifest?.h5?.title ?? appName,
-    width: config.window?.width ?? 420,
-    height: config.window?.height ?? 760,
-    minWidth: config.window?.minWidth,
-    minHeight: config.window?.minHeight,
-    center: config.window?.center ?? true,
-    resizable: config.window?.resizable ?? true,
-    fullscreen: config.window?.fullscreen ?? false,
-    frame: config.window?.frame ?? true,
-    titleBarStyle: config.window?.titleBarStyle,
-    autoHideMenuBar: config.window?.autoHideMenuBar ?? true,
-    backgroundColor: config.window?.backgroundColor,
-    show: config.window?.show ?? true,
-    alwaysOnTop: config.window?.alwaysOnTop ?? false,
-    kiosk: config.window?.kiosk ?? false,
-  }
+  const window = resolveWindow(config.window, config.window?.title ?? manifest?.h5?.title ?? appName)
 
   const icon = config.app?.icon && existsSync(join(root, config.app.icon)) ? config.app.icon : undefined
   const tray = config.tray
     ? {
         ...config.tray,
-        icon: existsSync(join(root, config.tray.icon)) ? config.tray.icon : '',
+        icon: resolveTrayIcon(root, config.tray.icon, icon),
       }
     : false
-  if (tray && !tray.icon)
-    throw new Error(`tray icon not found at ${config.tray && config.tray.icon}`)
 
   return {
     root,
@@ -109,6 +159,9 @@ export function normalizeConfig(config: DesktopConfig, manifest: ManifestInfo | 
     appId: config.app?.appId ?? buildAppId(appName),
     version: config.app?.version ?? manifest?.versionName ?? '1.0.0',
     copyright: config.app?.copyright,
+    author: config.app?.author ?? project.author,
+    homepage: config.app?.homepage ?? project.homepage,
+    description: config.app?.description ?? project.description ?? manifest?.description,
     icon,
     window,
     dev: {
@@ -135,6 +188,18 @@ export function normalizeConfig(config: DesktopConfig, manifest: ManifestInfo | 
       publish: config.pack?.publish,
     },
   }
+}
+
+/**
+ * Tray icons default to the app icon. An explicit tray icon must exist, so a
+ * typo fails loudly instead of silently disabling the tray after packaging.
+ */
+function resolveTrayIcon(root: string, trayIcon: string | undefined, appIcon: string | undefined): string | undefined {
+  if (!trayIcon)
+    return appIcon
+  if (!existsSync(join(root, trayIcon)))
+    throw new DesktopError(`tray icon not found at ${trayIcon}`)
+  return trayIcon
 }
 
 function collectWarnings(manifest: ManifestInfo | undefined): string[] {
@@ -170,16 +235,22 @@ export interface ResolveResult {
 export async function resolveDesktopConfig(cwd?: string): Promise<ResolveResult> {
   const root = resolve(cwd ?? process.cwd())
   const manifest = await readManifest(root)
+  const project = await readProjectInfo(root)
   const userConfig = await loadUserConfig(root)
   const warnings = collectWarnings(manifest)
-  const resolved = normalizeConfig(userConfig ?? {}, manifest, root)
+  const resolved = normalizeConfig(userConfig ?? {}, manifest, root, project)
   return { resolved, manifest, userConfig, warnings }
 }
 
-export function bakeConfig(resolved: ResolvedConfig, iconPath?: string): BakedDesktopConfig {
+/**
+ * Serialize the config for the bundled main process. Asset paths are reduced to
+ * file names inside the app resources directory; the runtime resolves them
+ * against the assembled app layout.
+ */
+export function bakeConfig(resolved: ResolvedConfig, assets: { icon?: string, trayIcon?: string } = {}): BakedDesktopConfig {
   const tray = resolved.tray
     ? {
-        iconPath: join(resolved.root, resolved.tray.icon),
+        icon: assets.trayIcon,
         tooltip: resolved.tray.tooltip,
         menu: resolved.tray.menu,
       }
@@ -189,28 +260,12 @@ export function bakeConfig(resolved: ResolvedConfig, iconPath?: string): BakedDe
     appName: resolved.appName,
     appId: resolved.appId,
     version: resolved.version,
-    window: {
-      title: resolved.window.title ?? resolved.appName,
-      width: resolved.window.width ?? 420,
-      height: resolved.window.height ?? 760,
-      minWidth: resolved.window.minWidth,
-      minHeight: resolved.window.minHeight,
-      center: resolved.window.center ?? true,
-      resizable: resolved.window.resizable ?? true,
-      fullscreen: resolved.window.fullscreen ?? false,
-      frame: resolved.window.frame ?? true,
-      titleBarStyle: resolved.window.titleBarStyle,
-      autoHideMenuBar: resolved.window.autoHideMenuBar ?? true,
-      backgroundColor: resolved.window.backgroundColor,
-      show: resolved.window.show ?? true,
-      alwaysOnTop: resolved.window.alwaysOnTop ?? false,
-      kiosk: resolved.window.kiosk ?? false,
-    },
+    window: resolved.window,
     dev: {
       openDevtools: resolved.dev.openDevtools,
     },
     tray,
     updater: resolved.updater,
-    iconPath: iconPath ?? (resolved.icon ? join(resolved.root, resolved.icon) : undefined),
+    icon: assets.icon,
   }
 }

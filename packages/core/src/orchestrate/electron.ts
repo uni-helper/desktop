@@ -1,8 +1,9 @@
+import type { ChildProcess } from 'node:child_process'
 import { spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
+import process from 'node:process'
 import { DesktopError } from '../error'
-import type { ChildProcess } from 'node:child_process'
 
 /** Resolve the electron binary path from the project's own dependencies. */
 export function resolveElectronBinary(root: string): string {
@@ -27,18 +28,50 @@ export function resolveElectronBinary(root: string): string {
   }
 }
 
-/** Kill a spawned process and, on POSIX, its whole process group. */
-export function killTree(child: ChildProcess | undefined): void {
-  if (!child?.pid || child.exitCode !== null)
-    return
-  if (process.platform === 'win32') {
-    spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' })
-    return
+const KILL_TIMEOUT = 5000
+
+/**
+ * Kill a spawned process and, on POSIX, its whole process group. Resolves once
+ * the process is gone, escalating to SIGKILL when it ignores SIGTERM, so callers
+ * never leak an orphan that keeps the port or the window alive.
+ */
+export function killTree(child: ChildProcess | undefined): Promise<void> {
+  if (!child?.pid || child.exitCode !== null || child.signalCode !== null)
+    return Promise.resolve()
+
+  const pid = child.pid
+  const exited = new Promise<void>((resolvePromise) => {
+    child.once('exit', () => resolvePromise())
+    child.once('error', () => resolvePromise())
+  })
+
+  const signal = (sig: NodeJS.Signals): void => {
+    if (process.platform === 'win32') {
+      spawn('taskkill', ['/pid', String(pid), '/T', '/F'], { stdio: 'ignore' })
+      return
+    }
+    try {
+      process.kill(-pid, sig)
+    }
+    catch {
+      child.kill(sig)
+    }
   }
-  try {
-    process.kill(-child.pid, 'SIGTERM')
-  }
-  catch {
-    child.kill('SIGTERM')
-  }
+
+  signal('SIGTERM')
+
+  return Promise.race([
+    exited,
+    new Promise<void>((resolvePromise) => {
+      const timer = setTimeout(() => {
+        signal('SIGKILL')
+        resolvePromise()
+      }, KILL_TIMEOUT)
+      timer.unref()
+      void exited.then(() => {
+        clearTimeout(timer)
+        resolvePromise()
+      })
+    }),
+  ])
 }

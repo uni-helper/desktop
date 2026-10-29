@@ -3,7 +3,8 @@
   "compilerOptions": {
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "paths": {
-      "@uni-helper/desktop-shim": ["../shim/src/index.ts"]
+      "@uni-helper/desktop-shim": ["../shim/src/index.ts"],
+      "@uni-helper/desktop-shim/channels": ["../shim/src/channels.ts"]
     },
     "types": ["node"]
   },

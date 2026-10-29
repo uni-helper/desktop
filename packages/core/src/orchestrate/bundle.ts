@@ -1,7 +1,7 @@
-import { build, context } from 'esbuild'
-import { join } from 'node:path'
 import type { BuildContext, Plugin } from 'esbuild'
 import type { BakedDesktopConfig } from '../baked'
+import { join } from 'node:path'
+import { build, context } from 'esbuild'
 import { logWarn } from '../log'
 
 const ELECTRON_EXTERNALS = ['electron', 'electron-updater']
@@ -51,9 +51,9 @@ export async function bundleEntry(options: BundleEntryOptions): Promise<BuildCon
     target: 'node20',
     outfile: join(options.outDir, 'main.cjs'),
     external: ELECTRON_EXTERNALS,
+    alias: options.alias,
     resolveExtensions: ['.tsx', '.ts', '.jsx', '.js', '.mjs', '.cjs', '.json', '.css'],
     define: { __DESKTOP_CONFIG__: JSON.stringify(options.baked) },
-    alias: options.alias,
     logLevel: 'silent' as const,
     plugins: options.watch ? [watchPlugin(() => options.onRebuild?.())] : undefined,
   }

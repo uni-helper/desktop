@@ -1,13 +1,16 @@
 import { existsSync } from 'node:fs'
-import { copyFile, cp, mkdir, rm, writeFile } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
+import { cp, rm, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import process from 'node:process'
 import { bakeConfig, resolveDesktopConfig } from '../config/resolve'
 import { DesktopError } from '../error'
 import { log } from '../log'
+import { copyAssets } from '../shared/assets'
+import { APP_DIR } from '../shared/paths'
+import { getTemplateDir, resolveMainEntry } from '../shared/templates'
 import { bundleEntry, bundlePreload } from './bundle'
-import { detectPackageManager, runCommand, spawnAwait } from './pm'
 import { packInternal } from './pack'
-import { getTemplateDir } from './dev'
+import { detectPackageManager, runCommand, spawnAwait } from './pm'
 
 export interface BuildOptions {
   /** Project root, defaults to process.cwd() */
@@ -28,7 +31,7 @@ export async function build(options: BuildOptions = {}): Promise<BuildResult> {
   const { resolved, warnings } = await resolveDesktopConfig(options.cwd)
   for (const warning of warnings) log(warning)
   const root = resolved.root
-  const outDir = join(root, 'dist/desktop')
+  const outDir = join(root, APP_DIR)
   const templateDir = getTemplateDir()
   log('building the H5 bundle...')
 
@@ -50,22 +53,13 @@ export async function build(options: BuildOptions = {}): Promise<BuildResult> {
     await cp(fallback, webDir, { recursive: true })
   }
 
-  let iconPath: string | undefined
-  if (resolved.icon) {
-    const source = join(root, resolved.icon)
-    if (existsSync(source)) {
-      const target = join(outDir, 'resources/icon.png')
-      await mkdir(dirname(target), { recursive: true })
-      await copyFile(source, target)
-      iconPath = target
-    }
-  }
-  const baked = bakeConfig(resolved, iconPath)
+  const assets = await copyAssets(resolved, outDir)
+  const baked = bakeConfig(resolved, assets)
 
   log('assembling the electron app...')
   const electronDir = join(outDir, 'electron')
   await bundleEntry({
-    entryPath: resolved.mainEntry ? join(root, resolved.mainEntry) : join(templateDir, 'main.ts'),
+    entryPath: resolveMainEntry(root, resolved.mainEntry),
     outDir: electronDir,
     baked,
   })
@@ -77,6 +71,9 @@ export async function build(options: BuildOptions = {}): Promise<BuildResult> {
     version: resolved.version,
     private: true,
     main: 'electron/main.cjs',
+    description: resolved.description,
+    author: resolved.author,
+    homepage: resolved.homepage,
   }, null, 2)}\n`)
 
   log(`desktop app assembled at ${outDir}`)

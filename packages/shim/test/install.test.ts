@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DesktopBridge } from '../src/types'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 function createBridge(): DesktopBridge & { invoke: ReturnType<typeof vi.fn> } {
   return {

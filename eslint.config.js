@@ -5,6 +5,7 @@ export default antfu(
   {
     type: 'lib',
     pnpm: false,
+    typescript: true,
     antislop: true,
     vue: {
       sfcBlocks: false,

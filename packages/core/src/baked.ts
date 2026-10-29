@@ -1,39 +1,28 @@
-import type { DesktopTrayConfig, DesktopUpdaterConfig, DesktopWindowConfig } from './types'
+import type { DesktopTrayMenuItem, DesktopUpdaterConfig, ResolvedWindowConfig } from './types'
 
 /**
  * Serializable config baked into the bundled main process through the
  * `__DESKTOP_CONFIG__` esbuild define. Keep it JSON-safe.
+ *
+ * Asset references are file names inside the app resources directory, never
+ * absolute paths: electron-builder moves the assembled app directory, so a
+ * build-time absolute path would not exist on the user's machine.
  */
 export interface BakedDesktopConfig {
   appName: string
   appId: string
   version: string
-  window: {
-    title: string
-    width: number
-    height: number
-    minWidth?: number
-    minHeight?: number
-    center: boolean
-    resizable: boolean
-    fullscreen: boolean
-    frame: boolean
-    titleBarStyle?: 'default' | 'hidden' | 'hiddenInset'
-    autoHideMenuBar: boolean
-    backgroundColor?: string
-    show: boolean
-    alwaysOnTop: boolean
-    kiosk: boolean
-  }
+  window: ResolvedWindowConfig
   dev: {
     openDevtools: boolean
   }
   tray: {
-    iconPath?: string
+    /** File name of the tray icon inside the app resources directory */
+    icon?: string
     tooltip?: string
-    menu?: DesktopTrayConfig['menu']
+    menu?: DesktopTrayMenuItem[]
   } | false
   updater: DesktopUpdaterConfig | false
-  /** Absolute path to the window icon, when one exists */
-  iconPath?: string
+  /** File name of the window icon inside the app resources directory */
+  icon?: string
 }

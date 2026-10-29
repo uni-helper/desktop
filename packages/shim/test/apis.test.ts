@@ -1,10 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DesktopBridge } from '../src/types'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { patchOpenDocument } from '../src/apis/open-document'
 import { patchSavedFile } from '../src/apis/saved-file'
 import { patchUni } from '../src/patch'
 
-function createBridge(responders: Record<string, (payload: any) => any> = {}) {
+function createBridge(responders: Record<string, (payload: any) => any> = {}): DesktopBridge & { invoke: ReturnType<typeof vi.fn> } {
   const bridge = {
     invoke: vi.fn(async (channel: string, payload?: unknown) => {
       const respond = responders[channel]
@@ -12,7 +12,7 @@ function createBridge(responders: Record<string, (payload: any) => any> = {}) {
     }),
     on: vi.fn(() => () => {}),
   }
-  window.__UNI_DESKTOP_BRIDGE__ = bridge as unknown as DesktopBridge
+  window.__UNI_DESKTOP_BRIDGE__ = bridge
   return bridge
 }
 
@@ -81,10 +81,12 @@ describe('saved files', () => {
     const res = await uni.saveFile({ tempFilePath })
 
     expect(res).toEqual({ errMsg: 'saveFile:ok', savedFilePath: 'desktop-file://f/saved' })
-    expect(bridge.invoke).toHaveBeenCalledWith('desktop:uni:saveFile', {
-      base64: btoa('png-bytes'),
-      mime: 'image/png',
-    })
+    // Bytes are transferred as-is; a base64 string would triple peak memory for
+    // large files.
+    const payload = bridge.invoke.mock.calls[0]?.[1] as { bytes: Uint8Array, mime: string }
+    expect(payload.mime).toBe('image/png')
+    expect(payload.bytes).toBeInstanceOf(Uint8Array)
+    expect(new TextDecoder().decode(payload.bytes)).toBe('png-bytes')
   })
 
   it('saveFile reports an unreadable temp path', async () => {

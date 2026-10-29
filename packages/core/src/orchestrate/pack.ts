@@ -1,27 +1,55 @@
-import { existsSync, readFileSync } from 'node:fs'
-import { createRequire } from 'node:module'
-import { writeFile } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
-import { resolveDesktopConfig } from '../config/resolve'
 import type { ResolvedConfig } from '../config/resolve'
+import { existsSync, readFileSync } from 'node:fs'
+import { writeFile } from 'node:fs/promises'
+import { createRequire } from 'node:module'
+import { dirname, join } from 'node:path'
+import process from 'node:process'
+import { resolveDesktopConfig } from '../config/resolve'
 import { DesktopError } from '../error'
 import { log } from '../log'
+import { APP_DIR, APP_RESOURCES_DIR, appIconFileName } from '../shared/paths'
 import { detectPackageManager, spawnAwait } from './pm'
 
 export interface PackOptions {
   /** Project root, defaults to process.cwd() */
   cwd?: string
+  /** Extra arguments appended to the electron-builder CLI, e.g. `['--publish', 'always']` */
+  args?: string[]
 }
 
 export interface PackResult {
   output: string
 }
 
+/** Read the installed electron version; electron-builder needs an exact one. */
+function resolveElectronVersion(root: string): string {
+  const require = createRequire(join(root, 'package.json'))
+  try {
+    const pkgPath = require.resolve('electron/package.json')
+    return (JSON.parse(readFileSync(pkgPath, 'utf8')) as { version: string }).version
+  }
+  catch {
+    throw new DesktopError(
+      'electron is not installed in this project, so its version cannot be pinned for electron-builder. '
+      + 'Run `pnpm add -D electron` first.',
+    )
+  }
+}
+
 /**
  * Build the electron-builder config from the desktop SDK config. The updater
  * feed doubles as the `publish` config when none is given.
+ *
+ * `electronVersion` is injected explicitly: electron-builder derives the
+ * `projectDir` from the working directory (the assembled app dir), where no
+ * `node_modules/electron` exists, so it would otherwise fail with
+ * "Cannot compute electron version".
  */
-export function createElectronBuilderConfig(resolved: ResolvedConfig, root: string): Record<string, unknown> {
+export function createElectronBuilderConfig(
+  resolved: ResolvedConfig,
+  root: string,
+  electronVersion: string,
+): Record<string, unknown> {
   const publish = resolved.pack.publish
     ?? (resolved.updater
       ? {
@@ -30,16 +58,18 @@ export function createElectronBuilderConfig(resolved: ResolvedConfig, root: stri
         }
       : undefined)
 
-  const icon = resolved.icon ? 'resources/icon.png' : undefined
+  const icon = resolved.icon ? `${APP_RESOURCES_DIR}/${appIconFileName(resolved.icon)}` : undefined
 
   return {
     appId: resolved.appId,
     productName: resolved.appName,
-    version: resolved.version,
+    electronVersion,
+    // `version` is not a valid electron-builder config key; it is read from the
+    // app `package.json`, which `build` writes from the resolved config.
     ...(resolved.copyright ? { copyright: resolved.copyright } : {}),
     directories: {
       output: join(root, resolved.pack.output),
-      buildResources: 'resources',
+      buildResources: APP_RESOURCES_DIR,
     },
     files: ['electron/**/*', 'web/**/*', 'resources/**/*', 'package.json'],
     asar: resolved.pack.asar,
@@ -58,7 +88,9 @@ export function createElectronBuilderConfig(resolved: ResolvedConfig, root: stri
     },
     ...(resolved.pack.dmg ? { dmg: resolved.pack.dmg } : {}),
     linux: {
-      target: resolved.pack.targets.linux ?? ['AppImage', 'deb'],
+      // `deb` additionally requires author email and homepage, so AppImage is
+      // the only target that works out of the box.
+      target: resolved.pack.targets.linux ?? ['AppImage'],
       category: 'Utility',
       ...(icon ? { icon } : {}),
       ...resolved.pack.linux,
@@ -83,15 +115,21 @@ function resolveElectronBuilderCli(root: string): string {
   return join(dirname(pkgPath), bin)
 }
 
-export async function packInternal(root: string, resolved: ResolvedConfig, appDir: string): Promise<PackResult> {
-  const config = createElectronBuilderConfig(resolved, root)
+export async function packInternal(
+  root: string,
+  resolved: ResolvedConfig,
+  appDir: string,
+  extraArgs: string[] = [],
+): Promise<PackResult> {
+  const electronVersion = resolveElectronVersion(root)
+  const config = createElectronBuilderConfig(resolved, root, electronVersion)
   const configPath = join(appDir, 'electron-builder.json')
   await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`)
 
   const cli = resolveElectronBuilderCli(root)
   const pm = detectPackageManager(root)
-  log(`running electron-builder via ${pm}...`)
-  await spawnAwait(process.execPath, [cli, '--config', configPath], { cwd: appDir })
+  log(`running electron-builder via ${pm} (electron ${electronVersion})...`)
+  await spawnAwait(process.execPath, [cli, '--config', configPath, ...extraArgs], { cwd: appDir })
   return { output: join(root, resolved.pack.output) }
 }
 
@@ -99,8 +137,8 @@ export async function packInternal(root: string, resolved: ResolvedConfig, appDi
 export async function pack(options: PackOptions = {}): Promise<PackResult> {
   const { resolved } = await resolveDesktopConfig(options.cwd)
   const root = resolved.root
-  const appDir = join(root, 'dist/desktop')
+  const appDir = join(root, APP_DIR)
   if (!existsSync(join(appDir, 'package.json')))
     throw new DesktopError(`no desktop app found at ${appDir}, run \`uni-desktop build\` first`)
-  return packInternal(root, resolved, appDir)
+  return packInternal(root, resolved, appDir, options.args)
 }

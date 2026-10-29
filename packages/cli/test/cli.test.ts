@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createCli } from '../src/cli'
+import { createCli, explicitPackFlag } from '../src/cli'
 import { printError, withErrorHandling } from '../src/run'
 
 function parse(args: string[]) {
@@ -26,7 +26,22 @@ describe('cli', () => {
 
   it('parses pack', () => {
     const cli = parse(['pack'])
-    expect(cli.options).toMatchObject({})
+    expect(cli.commands.find(command => command.name === 'pack')?.name).toBe('pack')
+  })
+
+  it('forwards unknown pack options to electron-builder', () => {
+    const cli = parse(['pack', '--', '--publish', 'always'])
+    expect(cli.options['--']).toEqual(['--publish', 'always'])
+  })
+})
+
+describe('explicitPackFlag', () => {
+  // `cac` always reports `pack: true` for a `--no-pack` option, so the config
+  // value would never win without inspecting the raw argv.
+  it('only reports a value when the flag was passed explicitly', () => {
+    expect(explicitPackFlag(['node', 'uni-desktop', 'build'], true)).toBeUndefined()
+    expect(explicitPackFlag(['node', 'uni-desktop', 'build', '--no-pack'], false)).toBe(false)
+    expect(explicitPackFlag(['node', 'uni-desktop', 'build', '--pack'], true)).toBe(true)
   })
 })
 

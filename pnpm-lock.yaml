@@ -174,6 +174,9 @@ catalogs:
     esbuild:
       specifier: ^0.28.0
       version: 0.28.2
+    jsonc-parser:
+      specifier: ^3.3.1
+      version: 3.3.1
     unconfig:
       specifier: ^7.5.0
       version: 7.5.0
@@ -323,6 +326,12 @@ importers:
       electron:
         specifier: 'catalog:'
         version: 45.0.0(supports-color@7.2.0)
+      electron-builder:
+        specifier: catalog:desktop
+        version: 26.18.0(electron-builder-squirrel-windows@26.18.0)(supports-color@7.2.0)
+      electron-updater:
+        specifier: catalog:desktop
+        version: 6.8.11(supports-color@7.2.0)
       vite:
         specifier: 5.2.8
         version: 5.2.8(@types/node@26.6.5)(lightningcss@1.33.0)(terser@5.51.2)
@@ -357,6 +366,9 @@ importers:
       esbuild:
         specifier: catalog:build
         version: 0.28.2
+      jsonc-parser:
+        specifier: catalog:build
+        version: 3.3.1
       unconfig:
         specifier: catalog:build
         version: 7.5.0
@@ -5260,10 +5272,6 @@ packages:
     resolution: {integrity: sha512-sauaDf/PZdVgrLTNYHRtpXa1iRiKcaebiKQ1BJdpQlWH2lCvexQdX55snPFyK7QzpudqbCI0qXFfOasHdyNDGQ==}
     hasBin: true
 
-  semver@6.3.0:
-    resolution: {integrity: sha512-b39TBaTSfV6yBrapU89p5fKekE2m/NwnDocOVruQFS1/veMgdzuPcnOM34M6CwxW8jH/lxEa5rBoDeUwu5HHTw==}
-    hasBin: true
-
   semver@6.3.1:
     resolution: {integrity: sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==}
     hasBin: true
@@ -7187,7 +7195,7 @@ snapshots:
       fs-extra: 8.1.0
       got: 11.8.6
       progress: 2.0.3
-      semver: 6.3.0
+      semver: 6.3.1
       sumchecker: 3.0.1(supports-color@7.2.0)
     optionalDependencies:
       global-agent: 3.0.0
@@ -11469,8 +11477,6 @@ snapshots:
     optional: true
 
   semver@5.7.1: {}
-
-  semver@6.3.0: {}
 
   semver@6.3.1: {}
 

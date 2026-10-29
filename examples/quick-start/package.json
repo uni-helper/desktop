@@ -25,6 +25,8 @@
     "@uni-helper/desktop": "workspace:*",
     "@uni-helper/desktop-cli": "workspace:*",
     "electron": "catalog:",
+    "electron-builder": "catalog:desktop",
+    "electron-updater": "catalog:desktop",
     "vite": "5.2.8"
   }
 }

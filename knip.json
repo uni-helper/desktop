@@ -16,10 +16,7 @@
         "@dcloudio/uni-cli-shared",
         "@dcloudio/uni-components",
         "@dcloudio/uni-h5",
-        "@dcloudio/uni-stacktracey",
-        "@dcloudio/vite-plugin-uni",
-        "electron",
-        "vite"
+        "@dcloudio/uni-stacktracey"
       ]
     }
   }
