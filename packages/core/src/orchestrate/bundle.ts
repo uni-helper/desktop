@@ -28,12 +28,20 @@ export interface BundlePreloadOptions {
 }
 
 function watchPlugin(onRebuild: () => void): Plugin {
+  let initial = true
   return {
     name: 'uni-desktop-watch',
     setup(build) {
       build.onEnd((result) => {
         if (result.errors.length > 0) {
           logger.error('main process rebuild failed:', result.errors[0]?.text)
+          return
+        }
+        // The initial build's output is exactly what `dev` spawns with, and its
+        // completion races the electron spawn: firing a restart on it would
+        // kill the app right after launch, whichever order they finish in.
+        if (initial) {
+          initial = false
           return
         }
         onRebuild()

@@ -43,6 +43,11 @@ describe('createElectronBuilderConfig', () => {
     expect((config as any).linux.target).toEqual(['AppImage'])
     expect((config as any).nsis).toMatchObject({ oneClick: false, allowToChangeInstallationDirectory: true })
     expect((config as any).files).toEqual(['electron/**/*', 'web/**/*', 'resources/**/*', 'package.json'])
+    // The built-in uni-helper icon backs every platform when none is configured,
+    // so installers never carry Electron's default icon.
+    expect((config as any).win.icon).toBe('resources/icon.png')
+    expect((config as any).mac.icon).toBe('resources/icon.png')
+    expect((config as any).linux.icon).toBe('resources/icon.png')
     expect(config.publish).toBeUndefined()
   })
 

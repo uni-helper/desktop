@@ -4,6 +4,8 @@ export default defineConfig({
   desktop: {
     app: {
       name: 'desktop-quick-start',
+      // Omit `icon` to use the built-in uni-helper icon for the window, the
+      // macOS Dock, the tray and the installers.
       // icon: 'static/logo.png',
     },
     window: {

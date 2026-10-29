@@ -1,9 +1,10 @@
 import type { BakedDesktopConfig } from '../src/baked'
-import { mkdir, readFile, rm } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { bundleEntry, bundlePreload } from '../src/orchestrate/bundle'
 
 const outDir = join(tmpdir(), `uni-desktop-bundle-${Date.now()}`)
@@ -69,6 +70,37 @@ describe('bundleEntry', () => {
     const output = await readFile(join(outDir, 'main.cjs'), 'utf8')
     expect(output).toContain('require("electron")')
   })
+})
+
+describe('bundleEntry watch', () => {
+  it('fires onRebuild for real changes only, not the initial build', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'uni-desktop-bundle-watch-'))
+    const outDir = join(dir, 'out')
+    const entry = join(dir, 'entry.ts')
+    await writeFile(entry, 'export const version = 1\n')
+
+    let rebuilds = 0
+    const watcher = await bundleEntry({
+      entryPath: entry,
+      outDir,
+      baked,
+      watch: true,
+      onRebuild: () => rebuilds++,
+    })
+    try {
+      // The initial build's onEnd must not count as a rebuild.
+      await vi.waitFor(() => expect(existsSync(join(outDir, 'main.cjs'))).toBe(true))
+      await new Promise(resolvePromise => setTimeout(resolvePromise, 100))
+      expect(rebuilds).toBe(0)
+
+      await writeFile(entry, 'export const version = 2\n')
+      await vi.waitFor(() => expect(rebuilds).toBe(1))
+    }
+    finally {
+      await watcher?.dispose()
+      await rm(dir, { recursive: true, force: true })
+    }
+  }, 15_000)
 })
 
 describe('bundlePreload', () => {

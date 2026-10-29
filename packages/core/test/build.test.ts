@@ -96,6 +96,19 @@ describe('build', () => {
     expect(existsSync(join(result.outDir, 'electron/../resources/icon.png'))).toBe(true)
   })
 
+  it('uses the built-in uni-helper icon when the config sets none', async () => {
+    const root = await createProject({})
+
+    const result = await build({ cwd: root, pack: false })
+
+    // Without a configured icon the assembled app still gets one, so the Dock,
+    // window and installers never fall back to Electron's icon.
+    const icon = await readFile(join(result.outDir, 'resources/icon.png'))
+    expect(icon.byteLength).toBeGreaterThan(0)
+    const main = await readFile(join(result.outDir, 'electron/main.cjs'), 'utf8')
+    expect(main).toContain('app.dock')
+  })
+
   it('generates an electron-builder config that pins the electron version', () => {
     const resolved = normalizeConfig({}, { name: 'app' }, '/tmp/app')
     const config = createElectronBuilderConfig(resolved, '/tmp/app', '45.0.0')

@@ -8,6 +8,7 @@ import { DesktopError } from '../error'
 import { logger } from '../log'
 import { copyAssets } from '../shared/assets'
 import { getTemplateDir, resolveMainEntry } from '../shared/templates'
+import { prepareDevAppBundle } from './app-bundle'
 import { bundleEntry, bundlePreload } from './bundle'
 import { killTree, resolveElectronBinary } from './electron'
 import { detectPackageManager, runCommand } from './pm'
@@ -84,14 +85,24 @@ export async function dev(options: DevOptions = {}): Promise<DevHandle> {
   await rm(join(assetsDir, 'resources'), { recursive: true, force: true })
   const baked = bakeConfig(resolved, await copyAssets(resolved, assetsDir))
 
-  // Declared before the watcher starts: esbuild fires `onRebuild` for the
-  // initial build as soon as `watch()` resolves, which can race ahead of the
-  // statements below.
   const electronBinary = resolveElectronBinary(root)
+  // On macOS the Dock reads the app name and icon from the running bundle, so
+  // dev launches a renamed, re-iconed clone of the electron bundle instead of
+  // the stock Electron.app; other platforms spawn the stock binary.
+  const launchBinary = await prepareDevAppBundle({
+    electronBinary,
+    appName: resolved.appName,
+    appId: resolved.appId,
+    icon: resolved.icon,
+    root,
+  })
+
+  // Declared before the watcher starts: a rebuild can land between the watcher
+  // and the first spawn, and must then be a no-op instead of a second spawn.
   let electronProcess: ChildProcess | undefined
   let electronStarted = false
   const spawnElectron = (): void => {
-    electronProcess = spawn(electronBinary, [join(outDir, 'main.cjs')], {
+    electronProcess = spawn(launchBinary, [join(outDir, 'main.cjs')], {
       cwd: root,
       env: { ...process.env, DESKTOP_DEV_URL: url },
       stdio: 'inherit',

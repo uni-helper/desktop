@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path'
 import process from 'node:process'
 import { loadConfig } from 'unconfig'
 import { DesktopError } from '../error'
+import { defaultIconPath } from '../shared/paths'
 
 export interface ManifestInfo {
   name?: string
@@ -40,8 +41,12 @@ export interface ResolvedConfig {
   homepage?: string
   /** Short description used by installers */
   description?: string
-  /** Project-relative icon path, when the file exists */
-  icon?: string
+  /**
+   * Absolute path to the icon used for the window, the tray fallback and the
+   * installers. Defaults to the built-in uni-helper icon when `app.icon` is not
+   * configured, so every app gets a real icon instead of Electron's.
+   */
+  icon: string
   window: ResolvedWindowConfig
   dev: {
     url: string
@@ -54,8 +59,8 @@ export interface ResolvedConfig {
     command: string
   }
   tray: {
-    /** Project-relative tray icon path; falls back to `icon` */
-    icon?: string
+    /** Absolute tray icon path; defaults to the app icon */
+    icon: string
     tooltip?: string
     menu?: DesktopTrayMenuItem[]
   } | false
@@ -145,7 +150,7 @@ export function normalizeConfig(
   const appName = config.app?.name ?? manifest?.name ?? 'uni-app-desktop'
   const window = resolveWindow(config.window, config.window?.title ?? manifest?.h5?.title ?? appName)
 
-  const icon = config.app?.icon && existsSync(join(root, config.app.icon)) ? config.app.icon : undefined
+  const icon = resolveAppIcon(root, config.app?.icon)
   const tray = config.tray
     ? {
         ...config.tray,
@@ -191,15 +196,31 @@ export function normalizeConfig(
 }
 
 /**
+ * Resolve the app icon to an absolute path. A configured `app.icon` must exist
+ * so a typo fails loudly instead of silently falling back; without one the
+ * built-in uni-helper icon is used, so the window, tray and installers never
+ * fall back to Electron's own icon.
+ */
+function resolveAppIcon(root: string, icon: string | undefined): string {
+  if (!icon)
+    return defaultIconPath()
+  const candidate = join(root, icon)
+  if (!existsSync(candidate))
+    throw new DesktopError(`app icon not found at ${icon}`)
+  return candidate
+}
+
+/**
  * Tray icons default to the app icon. An explicit tray icon must exist, so a
  * typo fails loudly instead of silently disabling the tray after packaging.
  */
-function resolveTrayIcon(root: string, trayIcon: string | undefined, appIcon: string | undefined): string | undefined {
+function resolveTrayIcon(root: string, trayIcon: string | undefined, appIcon: string): string {
   if (!trayIcon)
     return appIcon
-  if (!existsSync(join(root, trayIcon)))
+  const candidate = join(root, trayIcon)
+  if (!existsSync(candidate))
     throw new DesktopError(`tray icon not found at ${trayIcon}`)
-  return trayIcon
+  return candidate
 }
 
 function collectWarnings(manifest: ManifestInfo | undefined): string[] {

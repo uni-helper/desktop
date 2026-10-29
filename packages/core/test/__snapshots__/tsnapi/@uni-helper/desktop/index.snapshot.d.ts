@@ -151,7 +151,7 @@ export interface ResolvedConfig {
   author?: string;
   homepage?: string;
   description?: string;
-  icon?: string;
+  icon: string;
   window: ResolvedWindowConfig;
   dev: {
     url: string;
@@ -164,7 +164,7 @@ export interface ResolvedConfig {
     command: string;
   };
   tray: {
-    icon?: string;
+    icon: string;
     tooltip?: string;
     menu?: DesktopTrayMenuItem[];
   } | false;

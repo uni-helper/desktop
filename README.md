@@ -61,7 +61,7 @@ pnpm desktop:pack -- --publish always   # 额外参数原样透传给 electron-b
 
 `electron` 的版本会从项目自身的依赖中读取并写入 electron-builder 配置（`electronVersion`），因此不必在 `package.json` 里把版本写死。Linux 的 `deb` 目标额外要求 `app.author` 与 `app.homepage`，两者默认从项目 `package.json` 的 `author` / `homepage` 读取。
 
-安装包输出到 `dist/release`（可通过 `pack.output` 修改）。窗口/安装包图标通过 `app.icon` 指定，建议提供一张 512x512 以上的 PNG。
+安装包输出到 `dist/release`（可通过 `pack.output` 修改）。图标通过 `app.icon` 指定，建议提供一张 512x512 以上的 PNG；不配置时使用内置的 uni-helper 图标，因此窗口、Dock/任务栏、托盘和安装包都不会退回 Electron 的默认图标。macOS 上 dev 模式会把 Electron 的 app bundle 克隆到 `.uni-desktop/dev-electron` 并改写其中的应用名与图标（adhoc 重签后启动，按 electron 版本 / 应用名 / 图标缓存），Dock 从启动那一刻起就显示配置的应用名和图标而不是 "Electron"；克隆失败时回退为直接启动 Electron，由运行时的 `app.dock.setIcon` 兜底设置图标。
 
 命令行进度输出由 [consola](https://github.com/unjs/consola) 渲染：终端里按级别着色（`start` / `info` / `success` / `warn` / `error`），每行带 `[uni-desktop]` 标签，方便和 dev server、Electron 自身的输出区分；输出被重定向或运行在 CI 时自动退化为不带颜色的纯文本。
 
@@ -82,7 +82,7 @@ export default defineConfig({
       name: 'my-app', // 默认取 manifest.json 的 name
       appId: 'com.example.my-app', // 默认派生自 name
       version: '1.0.0', // 默认取 manifest.json 的 versionName
-      icon: 'static/logo.png', // 512x512+ PNG，窗口/托盘/安装包共用
+      icon: 'static/logo.png', // 512x512+ PNG，窗口/Dock/托盘/安装包共用；省略时用内置 uni-helper 图标
       copyright: '© 2026 Example',
     },
     window: {

@@ -24,7 +24,8 @@ export default defineConfig({
   desktop: {
     app: {
       name: '${appName}',
-      // A 512x512 PNG works for window icons and all installer targets
+      // A 512x512 PNG works for window icons and all installer targets.
+      // Omit it to use the built-in uni-helper icon.
       // icon: 'static/logo.png',
     },
     window: {

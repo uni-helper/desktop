@@ -58,7 +58,9 @@ export function createElectronBuilderConfig(
         }
       : undefined)
 
-  const icon = resolved.icon ? `${APP_RESOURCES_DIR}/${appIconFileName(resolved.icon)}` : undefined
+  // The resolved icon is always absolute (built-in uni-helper icon by default),
+  // so the installer icon is never Electron's own.
+  const icon = `${APP_RESOURCES_DIR}/${appIconFileName(resolved.icon)}`
 
   return {
     appId: resolved.appId,
@@ -75,7 +77,7 @@ export function createElectronBuilderConfig(
     asar: resolved.pack.asar,
     win: {
       target: resolved.pack.targets.win ?? ['nsis'],
-      ...(icon ? { icon } : {}),
+      icon,
     },
     nsis: {
       oneClick: false,
@@ -84,7 +86,7 @@ export function createElectronBuilderConfig(
     },
     mac: {
       target: resolved.pack.targets.mac ?? ['dmg'],
-      ...(icon ? { icon } : {}),
+      icon,
     },
     ...(resolved.pack.dmg ? { dmg: resolved.pack.dmg } : {}),
     linux: {
@@ -92,7 +94,7 @@ export function createElectronBuilderConfig(
       // the only target that works out of the box.
       target: resolved.pack.targets.linux ?? ['AppImage'],
       category: 'Utility',
-      ...(icon ? { icon } : {}),
+      icon,
       ...resolved.pack.linux,
     },
     ...(publish ? { publish } : {}),

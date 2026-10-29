@@ -14,3 +14,11 @@ if (!existsSync(source)) {
 rmSync(target, { recursive: true, force: true })
 mkdirSync(dirname(target), { recursive: true })
 cpSync(source, target, { recursive: true })
+
+// The built-in app icon ships next to the bundled entry, like the templates.
+const iconSource = join(pkgRoot, 'src/assets')
+const iconTarget = join(pkgRoot, 'dist/assets')
+if (existsSync(iconSource)) {
+  rmSync(iconTarget, { recursive: true, force: true })
+  cpSync(iconSource, iconTarget, { recursive: true })
+}

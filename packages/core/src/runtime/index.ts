@@ -50,6 +50,22 @@ function assetPath(fileName: string | undefined): string | undefined {
   return existsSync(candidate) ? candidate : undefined
 }
 
+/**
+ * Fallback icon assignment for the macOS Dock: the bundle that dev launches is
+ * a clone of Electron's, patched to carry the app icon (see the dev
+ * orchestration), and packaged apps get theirs from electron-builder. This
+ * covers the cases where the bundle could not be patched or its icon
+ * converted. Windows and Linux take the icon from `BrowserWindow`, which is
+ * set at window creation.
+ */
+function applyDockIcon(iconFileName: string | undefined): void {
+  if (process.platform !== 'darwin')
+    return
+  const iconPath = assetPath(iconFileName)
+  if (iconPath)
+    app.dock?.setIcon(iconPath)
+}
+
 function isInsideRoots(resolved: string, roots: string[]): boolean {
   return roots.some(root => resolved === root || resolved.startsWith(root + sep))
 }
@@ -275,6 +291,11 @@ export function createDesktopApp(baked: BakedDesktopConfig): void {
   registerDesktopFileProtocol()
   registerIpcHandlers()
 
+  // Match the packaged app: `userData` (and with it the single-instance lock
+  // and the menu roles) follows the app name, which would otherwise stay
+  // "Electron" in dev. Must run before `ready` to affect `userData`.
+  app.setName(baked.appName)
+
   // A desktop app is single-instance: a second launch focuses the running
   // window instead of starting a second copy of the app.
   if (!app.requestSingleInstanceLock()) {
@@ -292,6 +313,7 @@ export function createDesktopApp(baked: BakedDesktopConfig): void {
   })
 
   void app.whenReady().then(async () => {
+    applyDockIcon(baked.icon)
     protocol.handle(DESKTOP_FILE_SCHEME, serveDesktopFileRequest)
     createMainWindow(baked)
     setupTray(baked)

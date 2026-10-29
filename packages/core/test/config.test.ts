@@ -82,10 +82,10 @@ describe('resolveDesktopConfig', () => {
     expect(resolved.appName).toBe('from-config')
     expect(resolved.appId).toBe('com.example.app')
     expect(resolved.version).toBe('9.9.9')
-    expect(resolved.icon).toBe('static/logo.png')
+    expect(resolved.icon).toBe(join(root, 'static/logo.png'))
     expect(resolved.window).toMatchObject({ title: 'Custom', width: 1280, height: 800 })
     expect(resolved.dev.url).toBe('http://localhost:3000')
-    expect(resolved.tray).toEqual({ icon: 'static/tray.png' })
+    expect(resolved.tray).toEqual({ icon: join(root, 'static/tray.png') })
     expect(resolved.updater).toEqual({ provider: 'github', autoDownload: false })
     expect(resolved.pack).toMatchObject({ autoPack: false, targets: { win: ['portable'] } })
   })
@@ -164,7 +164,31 @@ export default defineConfig({ desktop: { window: { title: 'TS Title' } } })`,
 
     const { resolved } = await resolveDesktopConfig(root)
 
-    expect(resolved.tray).toMatchObject({ icon: 'static/logo.png' })
+    expect(resolved.tray).toMatchObject({ icon: join(root, 'static/logo.png') })
+  })
+
+  it('falls back to the built-in uni-helper icon', async () => {
+    const root = await createProject({
+      'src/manifest.json': JSON.stringify({ name: 'app' }),
+      'unh.config.json': JSON.stringify({ desktop: { tray: { tooltip: 'Tray' } } }),
+    })
+
+    const { resolved } = await resolveDesktopConfig(root)
+
+    // Without `app.icon` the window, tray and installers use the shipped icon
+    // instead of Electron's own, so the paths point outside the project.
+    expect(resolved.icon).not.toContain(root)
+    expect(resolved.icon).toMatch(/assets[/\\]icon\.png$/)
+    expect(resolved.tray).toMatchObject({ icon: resolved.icon })
+  })
+
+  it('fails loudly when a configured icon is missing', async () => {
+    const root = await createProject({
+      'src/manifest.json': JSON.stringify({ name: 'app' }),
+      'unh.config.json': JSON.stringify({ desktop: { app: { icon: 'static/missing.png' } } }),
+    })
+
+    await expect(resolveDesktopConfig(root)).rejects.toThrow('app icon not found at static/missing.png')
   })
 
   it('fills installer metadata from the project package.json', async () => {

@@ -8,10 +8,11 @@ export interface DesktopAppConfig {
   /** Copyright line rendered into installers */
   copyright?: string
   /**
-   * Project-relative path to a PNG icon, at least 512x512.
+   * Project-relative path to a PNG icon, at least 512x512. Must exist.
    *
    * The icon is copied next to the assembled app so it keeps working after
-   * packaging; it is used for the window, the tray fallback and installers.
+   * packaging; it is used for the window, the macOS Dock, the tray fallback
+   * and installers. Defaults to the built-in uni-helper icon.
    */
   icon?: string
   /** Author shown by Linux package managers, defaults to the project `package.json` author */
@@ -78,7 +79,7 @@ export interface DesktopTrayMenuItem {
 }
 
 export interface DesktopTrayConfig {
-  /** Project-relative path to the tray icon, defaults to `app.icon` */
+  /** Project-relative path to the tray icon, defaults to `app.icon`; must exist */
   icon?: string
   tooltip?: string
   menu?: DesktopTrayMenuItem[]
