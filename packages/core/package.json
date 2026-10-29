@@ -23,7 +23,7 @@
   "sideEffects": false,
   "exports": {
     ".": "./dist/index.mjs",
-    "./main": "./dist/main.mjs",
+    "./main": "./dist/runtime/index.mjs",
     "./package.json": "./package.json"
   },
   "types": "./dist/index.d.mts",

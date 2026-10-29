@@ -1,0 +1,30 @@
+{
+  "name": "@uni-helper/desktop-example-quick-start",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Quick start example for @uni-helper/desktop",
+  "scripts": {
+    "dev:h5": "uni",
+    "build:h5": "uni build",
+    "desktop:dev": "uni-desktop dev",
+    "desktop:build": "uni-desktop build",
+    "desktop:pack": "uni-desktop pack"
+  },
+  "dependencies": {
+    "@dcloudio/uni-app": "3.0.0-5030320261023001",
+    "@dcloudio/uni-components": "3.0.0-5030320261023001",
+    "@dcloudio/uni-h5": "3.0.0-5030320261023001",
+    "@uni-helper/desktop-shim": "workspace:*",
+    "vue": "^3.4.21"
+  },
+  "devDependencies": {
+    "@dcloudio/types": "^3.4.8",
+    "@dcloudio/uni-cli-shared": "3.0.0-5030320261023001",
+    "@dcloudio/uni-stacktracey": "3.0.0-5030320261023001",
+    "@dcloudio/vite-plugin-uni": "3.0.0-5030320261023001",
+    "@uni-helper/desktop": "workspace:*",
+    "@uni-helper/desktop-cli": "workspace:*",
+    "electron": "catalog:",
+    "vite": "5.2.8"
+  }
+}

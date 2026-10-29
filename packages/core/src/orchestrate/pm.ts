@@ -1,18 +1,35 @@
 import { existsSync } from 'node:fs'
 import { spawn } from 'node:child_process'
-import { join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { DesktopError } from '../error'
 
 export type PackageManager = 'pnpm' | 'npm' | 'yarn' | 'bun'
 
-export function detectPackageManager(root: string): PackageManager {
-  if (existsSync(join(root, 'pnpm-lock.yaml')))
+function hasLockfile(dir: string): PackageManager | undefined {
+  if (existsSync(join(dir, 'pnpm-lock.yaml')))
     return 'pnpm'
-  if (existsSync(join(root, 'yarn.lock')))
+  if (existsSync(join(dir, 'yarn.lock')))
     return 'yarn'
-  if (existsSync(join(root, 'bun.lockb')) || existsSync(join(root, 'bun.lock')))
+  if (existsSync(join(dir, 'bun.lockb')) || existsSync(join(dir, 'bun.lock')))
     return 'bun'
-  return 'npm'
+  return undefined
+}
+
+/**
+ * Detect the package manager from lockfiles, walking up so workspace members
+ * resolve to their workspace's package manager.
+ */
+export function detectPackageManager(root: string): PackageManager {
+  let current = resolve(root)
+  for (;;) {
+    const found = hasLockfile(current)
+    if (found)
+      return found
+    const parent = dirname(current)
+    if (parent === current)
+      return 'npm'
+    current = parent
+  }
 }
 
 export function runCommand(pm: PackageManager, script: string): { cmd: string, args: string[] } {

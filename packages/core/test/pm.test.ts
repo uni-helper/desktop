@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
@@ -24,6 +24,13 @@ describe('detectPackageManager', () => {
     expect(detectPackageManager(await projectWith(['bun.lockb']))).toBe('bun')
     expect(detectPackageManager(await projectWith([]))).toBe('npm')
     expect(detectPackageManager(await projectWith(['package-lock.json']))).toBe('npm')
+  })
+
+  it('walks up to the nearest lockfile for workspace members', async () => {
+    const parent = await projectWith(['pnpm-lock.yaml'])
+    const child = join(parent, 'packages', 'app')
+    await mkdir(child, { recursive: true })
+    expect(detectPackageManager(child)).toBe('pnpm')
   })
 })
 

@@ -1,0 +1,16 @@
+{
+  "name": "desktop-quick-start",
+  "appid": "",
+  "description": "Quick start example for @uni-helper/desktop",
+  "versionName": "1.0.0",
+  "versionCode": "100",
+  "transformPx": false,
+  "vueVersion": "3",
+  "h5": {
+    "title": "Desktop Quick Start",
+    "router": {
+      "mode": "hash",
+      "base": "./"
+    }
+  }
+}

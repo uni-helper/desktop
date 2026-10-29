@@ -2,6 +2,7 @@
 .DS_Store
 .githooks
 .idea
+.uni-desktop
 *.log
 *.tgz
 coverage

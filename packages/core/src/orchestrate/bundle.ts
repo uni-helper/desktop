@@ -51,6 +51,7 @@ export async function bundleEntry(options: BundleEntryOptions): Promise<BuildCon
     target: 'node20',
     outfile: join(options.outDir, 'main.cjs'),
     external: ELECTRON_EXTERNALS,
+    resolveExtensions: ['.tsx', '.ts', '.jsx', '.js', '.mjs', '.cjs', '.json', '.css'],
     define: { __DESKTOP_CONFIG__: JSON.stringify(options.baked) },
     alias: options.alias,
     logLevel: 'silent' as const,
