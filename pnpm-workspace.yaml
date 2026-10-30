@@ -14,9 +14,6 @@ update:
 shellEmulator: true
 
 packages:
-  - playground
-  - docs
-  - packages/*
   - examples/*
 
 allowBuilds:

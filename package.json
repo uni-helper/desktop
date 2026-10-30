@@ -1,10 +1,9 @@
 {
-  "name": "@uni-helper/desktop-monorepo",
+  "name": "@uni-helper/desktop",
   "type": "module",
   "version": "0.0.0",
-  "private": true,
   "packageManager": "pnpm@12.8.1",
-  "description": "Package uni-app projects as desktop apps with Electron",
+  "description": "SDK-configured Electron build and packaging for uni-app desktop apps",
   "author": "FliPPeDround <flippedround@qq.com>",
   "license": "MIT",
   "funding": "https://afdian.com/a/flippedround",
@@ -14,20 +13,46 @@
     "url": "git+https://github.com/uni-helper/desktop.git"
   },
   "bugs": "https://github.com/uni-helper/desktop/issues",
+  "keywords": [
+    "uni-app",
+    "electron",
+    "desktop",
+    "packaging",
+    "cli",
+    "shim",
+    "uni-helper"
+  ],
+  "sideEffects": [
+    "./dist/shim/index.mjs"
+  ],
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./main": "./dist/runtime/index.mjs",
+    "./shim": "./dist/shim/index.mjs",
+    "./shim/channels": "./dist/shim/channels.mjs",
+    "./package.json": "./package.json"
+  },
+  "types": "./dist/index.d.mts",
+  "bin": {
+    "uni-desktop": "./dist/cli.mjs"
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "build": "pnpm -r run build",
-    "dev": "pnpm -r --parallel run dev",
+    "build": "tsdown && node scripts/copy-templates.mjs",
+    "dev": "tsdown --watch",
     "knip": "knip",
     "lint": "eslint --cache",
     "release": "bumpp",
-    "test": "pnpm -r run test",
-    "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm run build && vitest run",
+    "typecheck": "tsc",
     "ci": "pnpm run lint && pnpm run typecheck && pnpm run knip && pnpm run test",
     "prepare": "git config core.hooksPath .githooks && simple-git-hooks && skills experimental_sync --agent codex -y"
   },
   "scripts-info": {
-    "build": "Build all workspace packages",
-    "dev": "Rebuild workspace packages on change",
+    "build": "Build the package",
+    "dev": "Rebuild the package on change",
     "knip": "Find unused files, exports and dependencies",
     "lint": "Check for code style issues",
     "release": "Bump version and publish a release",
@@ -36,18 +61,51 @@
     "ci": "Run the full continuous integration pipeline",
     "prepare": "Set up git hooks and skills"
   },
+  "peerDependencies": {
+    "electron": ">=20",
+    "electron-builder": ">=24",
+    "electron-updater": ">=6"
+  },
+  "peerDependenciesMeta": {
+    "electron": {
+      "optional": true
+    },
+    "electron-builder": {
+      "optional": true
+    },
+    "electron-updater": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "cac": "catalog:cli",
+    "consola": "catalog:build",
+    "esbuild": "catalog:build",
+    "jsonc-parser": "catalog:build",
+    "unconfig": "catalog:build"
+  },
   "devDependencies": {
     "@antfu/eslint-config": "catalog:cli",
     "@antfu/skills": "catalog:agentic",
+    "@types/node": "catalog:types",
     "bumpp": "catalog:cli",
+    "electron": "catalog:desktop",
+    "electron-builder": "catalog:desktop",
+    "electron-updater": "catalog:desktop",
     "eslint": "catalog:cli",
     "eslint-plugin-slop": "catalog:cli",
     "eslint-plugin-sonarjs": "catalog:cli",
+    "happy-dom": "catalog:testing",
     "knip": "catalog:cli",
     "nano-staged": "catalog:cli",
     "simple-git-hooks": "catalog:cli",
     "skills": "catalog:agentic",
-    "taze": "catalog:cli"
+    "taze": "catalog:cli",
+    "tsdown": "catalog:cli",
+    "tsdown-stale-guard": "catalog:testing",
+    "tsnapi": "catalog:testing",
+    "typescript": "catalog:cli",
+    "vitest": "catalog:testing"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm i --frozen-lockfile --ignore-scripts --offline && pnpm run ci && pnpx nano-staged"

@@ -1,8 +1,15 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "lib": ["ESNext"],
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "module": "Preserve",
+    "paths": {
+      "@uni-helper/desktop": ["./src/index.ts"],
+      "@uni-helper/desktop/main": ["./src/runtime/index.ts"],
+      "@uni-helper/desktop/shim": ["./src/shim/index.ts"],
+      "@uni-helper/desktop/shim/channels": ["./src/shim/channels.ts"]
+    },
+    "types": ["node"],
     "strict": true,
     "strictNullChecks": true,
     "noEmit": true,
@@ -10,5 +17,6 @@
     "verbatimModuleSyntax": true,
     "skipDefaultLibCheck": true,
     "skipLibCheck": true
-  }
+  },
+  "include": ["src", "test", "tsdown.config.ts", "vitest.config.ts"]
 }

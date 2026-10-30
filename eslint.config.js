@@ -13,7 +13,7 @@ export default antfu(
     ignores: ['**/index.html'],
   },
   {
-    files: ['packages/cli/src/**/*.ts', 'packages/core/src/**/*.ts'],
+    files: ['src/**/*.ts'],
     rules: {
       'no-console': 'off',
     },

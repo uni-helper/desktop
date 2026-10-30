@@ -2,11 +2,12 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "workspaces": {
     ".": {
+      "entry": [
+        "src/templates/main.ts",
+        "src/templates/preload.ts"
+      ],
+      "ignore": ["test/__snapshots__/**/*"],
       "ignoreDependencies": ["@antfu/skills", "taze"]
-    },
-    "packages/core": {
-      "entry": ["src/templates/main.ts", "src/templates/preload.ts"],
-      "ignore": ["test/__snapshots__/**/*"]
     },
     "examples/quick-start": {
       "vite": false,

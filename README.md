@@ -22,7 +22,7 @@
 在项目根目录执行：
 
 ```sh
-pnpm dlx @uni-helper/desktop-cli init
+pnpm dlx @uni-helper/desktop init
 ```
 
 `init` 会完成：写入 `unh.config.ts`、追加 `desktop:*` 脚本、把 manifest.json 的 `h5.router` 规范为 hash 路由 + `./` base、在 `src/main.ts` 首行注入垫片导入、安装依赖。
@@ -30,14 +30,13 @@ pnpm dlx @uni-helper/desktop-cli init
 也可以手动安装：
 
 ```sh
-pnpm add @uni-helper/desktop-shim
-pnpm add -D @uni-helper/desktop @uni-helper/desktop-cli electron electron-builder electron-updater
+pnpm add -D @uni-helper/desktop electron electron-builder electron-updater
 ```
 
 然后确保 `src/main.ts` 首行引入垫片：
 
 ```ts
-import '@uni-helper/desktop-shim'
+import '@uni-helper/desktop/shim'
 ```
 
 ### 开发
@@ -196,11 +195,15 @@ createDesktopApp(__DESKTOP_CONFIG__)
 
 ## 包结构
 
-| 包 | 说明 |
+单包发布，所有能力通过子路径导出与 `bin` 提供：
+
+| 导入 / 命令 | 说明 |
 | --- | --- |
-| [`@uni-helper/desktop`](./packages/core) | 核心：配置解析、dev/build/pack 编排、主进程模板与运行时 |
-| [`@uni-helper/desktop-shim`](./packages/shim) | 渲染端 uni API 垫片与 IPC 契约 |
-| [`@uni-helper/desktop-cli`](./packages/cli) | `uni-desktop` 命令行工具 |
+| `@uni-helper/desktop` | `defineConfig`、`dev` / `build` / `pack` / `init` 编排 |
+| `@uni-helper/desktop/shim` | 渲染端 uni API 垫片（在 `src/main.ts` 首行导入） |
+| `@uni-helper/desktop/shim/channels` | 垫片 IPC 通道契约，自定义主进程可复用 |
+| `@uni-helper/desktop/main` | 自定义主进程入口复用的 `createDesktopApp` |
+| `uni-desktop`（bin） | 命令行工具，对应上述 dev / build / pack / init |
 
 ## License
 
