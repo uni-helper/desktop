@@ -50,6 +50,29 @@ describe('resolveDesktopConfig', () => {
     expect(resolved.pack.autoPack).toBe(true)
   })
 
+  it('reads conditional compilation for the H5 platform', async () => {
+    const root = await createProject({
+      'src/manifest.json': `{
+  "name": "common-name",
+  // #ifdef MP-WEIXIN
+  "name": "wx-name",
+  // #endif
+  "h5": {
+    "router": { "mode": "hash", "base": "./" },
+    // #ifdef H5
+    "title": "Desktop Title"
+    // #endif
+  }
+}`,
+    })
+
+    const { resolved, warnings } = await resolveDesktopConfig(root)
+
+    expect(warnings).toEqual([])
+    expect(resolved.appName).toBe('common-name')
+    expect(resolved.window.title).toBe('Desktop Title')
+  })
+
   it('warns about history router and non-relative base', async () => {
     const root = await createProject({
       'src/manifest.json': JSON.stringify({

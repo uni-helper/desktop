@@ -24,13 +24,12 @@ async function createProject(files: Record<string, string>): Promise<string> {
 const PACKAGE_JSON = JSON.stringify({ name: 'app', version: '1.0.0' }, null, 2)
 
 describe('init', () => {
-  it('keeps manifest comments and trailing commas while normalizing h5.router', async () => {
+  it('normalizes h5.router while keeping conditional compilation', async () => {
     const root = await createProject({
       'package.json': PACKAGE_JSON,
-      // uni-app itself parses manifest.json with jsonc-parser, so this file is
-      // valid for the toolchain and must stay readable after `init`.
+      // uni-app manifest.json is JSONC with #ifdef conditional compilation;
+      // normalizing h5.router must not drop the platform blocks.
       'src/manifest.json': `{
-  // The app name
   "name": "commented-app",
   "h5": {
     "title": "Commented",
@@ -38,6 +37,9 @@ describe('init', () => {
       "mode": "history",
     },
   },
+  // #ifdef MP-WEIXIN
+  "mp-weixin": { "appid": "wx123" }
+  // #endif
 }
 `,
     })
@@ -45,9 +47,28 @@ describe('init', () => {
     await init({ cwd: root, install: false })
 
     const manifest = await readFile(join(root, 'src/manifest.json'), 'utf8')
-    expect(manifest).toContain('// The app name')
     expect(manifest).toContain('"mode": "hash"')
     expect(manifest).toContain('"base": "./"')
+    expect(manifest).toContain('// #ifdef MP-WEIXIN')
+    expect(manifest).toContain('"appid": "wx123"')
+    expect(manifest).not.toContain('"mode": "history"')
+  })
+
+  it('leaves an already-normalized manifest untouched', async () => {
+    const content = `{
+  // The app name
+  "name": "commented-app",
+  "h5": { "router": { "mode": "hash", "base": "./" } },
+}
+`
+    const root = await createProject({
+      'package.json': PACKAGE_JSON,
+      'src/manifest.json': content,
+    })
+
+    await init({ cwd: root, install: false })
+
+    expect(await readFile(join(root, 'src/manifest.json'), 'utf8')).toBe(content)
   })
 
   it('creates unh.config.ts, desktop scripts and the shim import', async () => {

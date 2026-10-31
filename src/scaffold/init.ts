@@ -2,10 +2,10 @@ import { existsSync } from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import process from 'node:process'
-import { applyEdits, modify, parse } from 'jsonc-parser'
 import { DesktopError } from '../error'
 import { logger } from '../log'
 import { addCommand, detectPackageManager, spawnAwait } from '../orchestrate/pm'
+import { parseManifest } from '../shared/manifest'
 
 export interface InitOptions {
   /** Project root, defaults to process.cwd() */
@@ -43,27 +43,25 @@ const DESKTOP_SCRIPTS: Record<string, string> = {
 }
 
 /**
- * uni-app parses `manifest.json` with `jsonc-parser`, so comments and trailing
- * commas are valid there. Editing through the same parser keeps those intact
- * instead of round-tripping the file through `JSON.parse`/`stringify`.
+ * Desktop apps load the H5 bundle from `file://`, which needs hash routing and
+ * a relative base. `manifest.json` is uni-app json with `#ifdef` conditional
+ * compilation, so edits go through `@uni-helper/jsonu` and keep the platform
+ * blocks intact instead of round-tripping the file through `JSON.parse`.
  */
 async function normalizeManifest(manifestPath: string): Promise<string | undefined> {
   const content = await readFile(manifestPath, 'utf8')
-  const manifest = parse(content, [], { allowTrailingComma: true, disallowComments: false }) as
-    { name?: string, h5?: { router?: { mode?: string, base?: string } } } | undefined
+  const { doc, manifest } = parseManifest(content)
 
-  if (!manifest || typeof manifest !== 'object')
+  if (!manifest)
     throw new DesktopError(`${manifestPath} is not a valid JSON object`)
 
-  // Applied one at a time: when `h5.router` is missing both edits would create
-  // the same parent object and jsonc-parser rejects the overlapping ranges.
-  const formattingOptions = { insertSpaces: true, tabSize: 2 }
-  let next = content
-  for (const [path, value] of [['mode', 'hash'], ['base', './']] as const)
-    next = applyEdits(next, modify(next, ['h5', 'router', path], value, { formattingOptions }))
-
-  if (next !== content) {
-    await writeFile(manifestPath, next)
+  const router = manifest.h5?.router
+  if (router?.mode !== 'hash' || router?.base !== './') {
+    // Common (`*`) values: they win over leftover conditional members for H5
+    // while other platforms keep their own data.
+    doc.set('*', 'hash', ['h5', 'router', 'mode'])
+    doc.set('*', './', ['h5', 'router', 'base'])
+    await writeFile(manifestPath, `${doc.stringify()}\n`)
     logger.success('updated manifest.json (h5.router mode "hash", base "./")')
   }
   return manifest.name

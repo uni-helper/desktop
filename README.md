@@ -151,7 +151,7 @@ export default defineConfig({
 
 `unh.config.ts` 由 [unconfig](https://github.com/unocss/unocss/tree/main/packages/unconfig) 加载，因此 `unh.config.{ts,mts,js,mjs,cjs,json}` 都可以使用。`desktop` 之外的顶层键会被忽略，留给其他工具消费。
 
-`manifest.json` 由 `jsonc-parser` 解析（与 uni-app 自身一致），因此 `init` 在补全 `h5.router` 时会保留注释与尾逗号。
+`manifest.json` 由 [@uni-helper/jsonu](https://github.com/uni-helper/jsonu) 解析，支持 uni-app 的 `#ifdef` 条件编译注释，按 H5 平台求值。`init` 补全 `h5.router` 时会保留条件编译块（重写文件时普通注释会被移除，仅条件编译注释往返保留）。
 
 所有字段都是可选的，未配置的值按 `defaults < manifest.json < unh.config.ts 的 desktop` 合并。
 

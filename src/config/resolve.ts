@@ -1,4 +1,5 @@
 import type { BakedDesktopConfig } from '../baked'
+import type { ManifestInfo } from '../shared/manifest'
 import type { DesktopConfig, DesktopTrayMenuItem, DesktopUpdaterConfig, DesktopWindowConfig, ResolvedWindowConfig, UnhConfig } from '../types'
 import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
@@ -6,21 +7,10 @@ import { join, resolve } from 'node:path'
 import process from 'node:process'
 import { loadConfig } from 'unconfig'
 import { DesktopError } from '../error'
+import { parseManifest } from '../shared/manifest'
 import { defaultIconPath } from '../shared/paths'
 
-export interface ManifestInfo {
-  name?: string
-  appid?: string
-  versionName?: string
-  description?: string
-  h5?: {
-    title?: string
-    router?: {
-      mode?: string
-      base?: string
-    }
-  }
-}
+export type { ManifestInfo } from '../shared/manifest'
 
 /** Metadata read from the project `package.json`, used to fill installer fields. */
 export interface ProjectInfo {
@@ -113,7 +103,7 @@ async function readManifest(root: string): Promise<ManifestInfo | undefined> {
   const file = join(root, 'src/manifest.json')
   if (!existsSync(file))
     return undefined
-  return JSON.parse(await readFile(file, 'utf8')) as ManifestInfo
+  return parseManifest(await readFile(file, 'utf8')).manifest
 }
 
 async function readProjectInfo(root: string): Promise<ProjectInfo> {

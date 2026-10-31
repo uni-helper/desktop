@@ -84,10 +84,10 @@
     }
   },
   "dependencies": {
+    "@uni-helper/jsonu": "catalog:build",
     "cac": "catalog:cli",
     "consola": "catalog:build",
     "esbuild": "catalog:build",
-    "jsonc-parser": "catalog:build",
     "unconfig": "catalog:build"
   },
   "devDependencies": {
