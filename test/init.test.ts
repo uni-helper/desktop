@@ -73,6 +73,49 @@ describe('init', () => {
     const main = await readFile(join(root, 'src/main.ts'), 'utf8')
     expect(main.startsWith('import \'@uni-helper/desktop/shim\'\n')).toBe(true)
     expect(main).toContain('export function createApp()')
+
+    // Compiled builds only reach the shim through the vite plugin: uni rewrites
+    // every `uni.xxx` call into an import from `@dcloudio/uni-h5`.
+    const vite = await readFile(join(root, 'vite.config.ts'), 'utf8')
+    expect(vite).toContain('import { uniDesktop } from \'@uni-helper/desktop/vite\'')
+    expect(vite).toContain('plugins: [uni(), uniDesktop()]')
+  })
+
+  it('adds the uniDesktop plugin to an existing vite.config.ts', async () => {
+    const root = await createProject({
+      'package.json': PACKAGE_JSON,
+      'src/manifest.json': JSON.stringify({ name: 'app' }),
+      'vite.config.ts': `import uni from '@dcloudio/vite-plugin-uni'
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+  plugins: [uni()],
+})
+`,
+    })
+
+    await init({ cwd: root, install: false })
+
+    const vite = await readFile(join(root, 'vite.config.ts'), 'utf8')
+    expect(vite).toContain('import { uniDesktop } from \'@uni-helper/desktop/vite\'')
+    expect(vite).toContain('uniDesktop()')
+    // The original config content survives the edit.
+    expect(vite).toContain('uni()')
+  })
+
+  it('does not duplicate the uniDesktop plugin when it is already present', async () => {
+    const root = await createProject({
+      'package.json': PACKAGE_JSON,
+      'src/manifest.json': JSON.stringify({ name: 'app' }),
+      'vite.config.ts': `import { uniDesktop } from '@uni-helper/desktop/vite'
+export default { plugins: [] }
+`,
+    })
+
+    await init({ cwd: root, install: false })
+
+    const vite = await readFile(join(root, 'vite.config.ts'), 'utf8')
+    expect(vite.match(/@uni-helper\/desktop\/vite/g)).toHaveLength(1)
   })
 
   it('does not duplicate the shim import when it is already present', async () => {

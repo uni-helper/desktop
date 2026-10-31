@@ -26,41 +26,65 @@ async function readAsBytes(url: string): Promise<{ bytes: Uint8Array, mime?: str
   return { bytes, mime: contentType || undefined }
 }
 
-export function patchSavedFile(uni: Record<string, any>): void {
-  uni.saveFile = (options: UniOptions = {}) => invokeUniApi(
+/** Desktop `saveFile`: persist renderer bytes into the app-managed directory. */
+export function saveFile(options: UniOptions = {}): Promise<{ savedFilePath: string }> | undefined {
+  return invokeUniApi(
     'saveFile',
     options,
     async () => {
       if (typeof options.tempFilePath !== 'string')
         throw new Error('tempFilePath is required')
+      const bridge = getBridge()
+      if (!bridge)
+        throw new Error('desktop bridge unavailable; run inside the uni-desktop shell')
       const { bytes, mime } = await readAsBytes(options.tempFilePath)
-      return await getBridge()!.invoke(shimChannels.saveFile, { bytes, mime }) as { savedFilePath: string }
+      return await bridge.invoke(shimChannels.saveFile, { bytes, mime }) as { savedFilePath: string }
     },
   )
+}
 
-  uni.getSavedFileList = (options: UniOptions = {}) => invokeUniApi(
+/** Desktop `getSavedFileList`: list the app-managed directory. */
+export function getSavedFileList(options: UniOptions = {}): Promise<{ fileList: any[] }> | undefined {
+  return invokeUniApi(
     'getSavedFileList',
     options,
-    async () => await getBridge()!.invoke(shimChannels.getSavedFileList) as { fileList: any[] },
+    async () => {
+      const bridge = getBridge()
+      if (!bridge)
+        throw new Error('desktop bridge unavailable; run inside the uni-desktop shell')
+      return await bridge.invoke(shimChannels.getSavedFileList) as { fileList: any[] }
+    },
   )
+}
 
-  uni.getSavedFileInfo = (options: UniOptions = {}) => invokeUniApi(
+/** Desktop `getSavedFileInfo`: stat one file inside the app-managed directory. */
+export function getSavedFileInfo(options: UniOptions = {}): Promise<{ size: number, createTime: number }> | undefined {
+  return invokeUniApi(
     'getSavedFileInfo',
     options,
     async () => {
       if (typeof options.filePath !== 'string')
         throw new Error('filePath is required')
-      return await getBridge()!.invoke(shimChannels.getSavedFileInfo, { filePath: options.filePath }) as { size: number, createTime: number }
+      const bridge = getBridge()
+      if (!bridge)
+        throw new Error('desktop bridge unavailable; run inside the uni-desktop shell')
+      return await bridge.invoke(shimChannels.getSavedFileInfo, { filePath: options.filePath }) as { size: number, createTime: number }
     },
   )
+}
 
-  uni.removeSavedFile = (options: UniOptions = {}) => invokeUniApi(
+/** Desktop `removeSavedFile`: delete one file from the app-managed directory. */
+export function removeSavedFile(options: UniOptions = {}): Promise<{ errMsg: string }> | undefined {
+  return invokeUniApi(
     'removeSavedFile',
     options,
     async () => {
       if (typeof options.filePath !== 'string')
         throw new Error('filePath is required')
-      await getBridge()!.invoke(shimChannels.removeSavedFile, { filePath: options.filePath })
+      const bridge = getBridge()
+      if (!bridge)
+        throw new Error('desktop bridge unavailable; run inside the uni-desktop shell')
+      await bridge.invoke(shimChannels.removeSavedFile, { filePath: options.filePath })
       return {}
     },
   )

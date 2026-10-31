@@ -25,7 +25,7 @@
 pnpm dlx @uni-helper/desktop init
 ```
 
-`init` 会完成：写入 `unh.config.ts`、追加 `desktop:*` 脚本、把 manifest.json 的 `h5.router` 规范为 hash 路由 + `./` base、在 `src/main.ts` 首行注入垫片导入、安装依赖。
+`init` 会完成：写入 `unh.config.ts`、追加 `desktop:*` 脚本、把 manifest.json 的 `h5.router` 规范为 hash 路由 + `./` base、在 `src/main.ts` 首行注入垫片导入、在 `vite.config.ts` 注册 `uniDesktop` 插件、安装依赖。
 
 也可以手动安装：
 
@@ -33,10 +33,22 @@ pnpm dlx @uni-helper/desktop init
 pnpm add -D @uni-helper/desktop electron electron-builder electron-updater
 ```
 
-然后确保 `src/main.ts` 首行引入垫片：
+然后做两处接线。其一，`src/main.ts` 首行引入垫片（dev server 走全局 `uni` 时由它打补丁）：
 
 ```ts
 import '@uni-helper/desktop/shim'
+```
+
+其二，`vite.config.ts` 注册 `uniDesktop` 插件（编译产物里 uni 会把所有 `uni.xxx` 调用重写为对 `@dcloudio/uni-h5` 的具名导入，不走全局对象，必须靠它在模块层拦截替换）：
+
+```ts
+import uni from '@dcloudio/vite-plugin-uni'
+import { uniDesktop } from '@uni-helper/desktop/vite'
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+  plugins: [uni(), uniDesktop()],
+})
 ```
 
 ### 开发
@@ -149,6 +161,8 @@ export default defineConfig({
 
 原则：**uni-h5 已经实现的 API 一律沿用原版**，桌面端与 H5 行为完全一致；只有 H5 端没有实现的 API 才由垫片桥接到 Electron 主进程。
 
+垫片在两条路径上生效：dev server 下 uni 运行时把 API 对象填进全局 `uni`，由 `src/main.ts` 首行导入的 `@uni-helper/desktop/shim` 就地打补丁；编译产物里 `uni.xxx` 调用被 uni 重写为 `@dcloudio/uni-h5` 的具名导入，由 `vite.config.ts` 里的 `uniDesktop` 插件在模块层替换导出。两条路径缺一不可。
+
 | API | H5 端状态 | 桌面端行为 |
 | --- | --- | --- |
 | `uni.saveFile` | 未实现（直接 fail） | 把临时文件写入应用管理目录，返回 `savedFilePath` |
@@ -202,6 +216,8 @@ createDesktopApp(__DESKTOP_CONFIG__)
 | `@uni-helper/desktop` | `defineConfig`、`dev` / `build` / `pack` / `init` 编排 |
 | `@uni-helper/desktop/shim` | 渲染端 uni API 垫片（在 `src/main.ts` 首行导入） |
 | `@uni-helper/desktop/shim/channels` | 垫片 IPC 通道契约，自定义主进程可复用 |
+| `@uni-helper/desktop/shim/apis` | 垫片 API 实现（`uniDesktop` 插件的模块替换层引用） |
+| `@uni-helper/desktop/vite` | `uniDesktop` vite 插件，在 `vite.config.ts` 中注册 |
 | `@uni-helper/desktop/main` | 自定义主进程入口复用的 `createDesktopApp` |
 | `uni-desktop`（bin） | 命令行工具，对应上述 dev / build / pack / init |
 

@@ -7,7 +7,9 @@
       "@uni-helper/desktop": ["./src/index.ts"],
       "@uni-helper/desktop/main": ["./src/runtime/index.ts"],
       "@uni-helper/desktop/shim": ["./src/shim/index.ts"],
-      "@uni-helper/desktop/shim/channels": ["./src/shim/channels.ts"]
+      "@uni-helper/desktop/shim/channels": ["./src/shim/channels.ts"],
+      "@uni-helper/desktop/shim/apis": ["./src/shim/apis/index.ts"],
+      "@uni-helper/desktop/vite": ["./src/vite/index.ts"]
     },
     "types": ["node"],
     "strict": true,

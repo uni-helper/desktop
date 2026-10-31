@@ -80,6 +80,43 @@ async function ensureShimImport(mainPath: string): Promise<void> {
   logger.success('added the shim import to src/main.ts')
 }
 
+const VITE_CONFIG_TEMPLATE = `import uni from '@dcloudio/vite-plugin-uni'
+import { defineConfig } from 'vite'
+import { uniDesktop } from '@uni-helper/desktop/vite'
+
+export default defineConfig({
+  plugins: [uni(), uniDesktop()],
+})
+`
+
+/**
+ * Wire the desktop vite plugin into the H5 build. Compiled builds route every
+ * `uni.xxx` call through uni-h5's module exports, so without the plugin the
+ * runtime shim never sees the calls (`desktop:build`/`desktop:pack` apps would
+ * get uni-h5's "not supported" stubs for saveFile & co.).
+ */
+async function ensureViteConfig(root: string): Promise<void> {
+  const configPath = join(root, 'vite.config.ts')
+  if (!existsSync(configPath)) {
+    await writeFile(configPath, VITE_CONFIG_TEMPLATE)
+    logger.success('created vite.config.ts with the uniDesktop plugin')
+    return
+  }
+
+  const content = await readFile(configPath, 'utf8')
+  if (content.includes('@uni-helper/desktop/vite'))
+    return
+  if (!content.includes('plugins:')) {
+    logger.warn('vite.config.ts has no `plugins` array; add uniDesktop() from @uni-helper/desktop/vite manually')
+    return
+  }
+
+  let next = `import { uniDesktop } from '@uni-helper/desktop/vite'\n${content}`
+  next = next.replace(/plugins:\s*\[/, 'plugins: [\n    uniDesktop(),')
+  await writeFile(configPath, next)
+  logger.success('added the uniDesktop plugin to vite.config.ts')
+}
+
 async function ensureScripts(pkgPath: string): Promise<{ scripts?: Record<string, string>, dependencies?: Record<string, string>, devDependencies?: Record<string, string> }> {
   const pkg = JSON.parse(await readFile(pkgPath, 'utf8')) as {
     scripts?: Record<string, string>
@@ -123,6 +160,7 @@ export async function init(options: InitOptions = {}): Promise<void> {
   }
 
   await ensureShimImport(join(root, 'src/main.ts'))
+  await ensureViteConfig(root)
 
   const pkgPath = join(root, 'package.json')
   const pkg = await ensureScripts(pkgPath)

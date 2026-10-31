@@ -1,8 +1,7 @@
 // @vitest-environment happy-dom
 import type { DesktopBridge } from '../../src/shim/types'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { patchOpenDocument } from '../../src/shim/apis/open-document'
-import { patchSavedFile } from '../../src/shim/apis/saved-file'
+import { createOpenDocument, getSavedFileInfo, getSavedFileList, removeSavedFile, saveFile } from '../../src/shim/apis/index'
 import { patchUni } from '../../src/shim/patch'
 
 function createBridge(responders: Record<string, (payload: any) => any> = {}): DesktopBridge & { invoke: ReturnType<typeof vi.fn> } {
@@ -15,12 +14,6 @@ function createBridge(responders: Record<string, (payload: any) => any> = {}): D
   }
   window.__UNI_DESKTOP_BRIDGE__ = bridge
   return bridge
-}
-
-function patchedUni(patch: (uni: Record<string, any>) => void): Record<string, any> {
-  const uni: Record<string, any> = {}
-  patch(uni)
-  return uni
 }
 
 /** Build a `blob:`-like URL whose bytes are readable through `fetch`. */
@@ -48,7 +41,6 @@ describe('patchUni scope', () => {
       chooseImage: vi.fn(),
       chooseVideo: vi.fn(),
       chooseFile: vi.fn(),
-      openDocument: vi.fn(),
     }
     const uni = { ...original }
     patchUni(uni)
@@ -62,12 +54,24 @@ describe('patchUni scope', () => {
 
   it('patches only the APIs uni-h5 does not implement', () => {
     createBridge()
-    const uni = patchedUni(patchUni)
+    const uni: Record<string, any> = {}
+    patchUni(uni)
 
-    expect(typeof uni.saveFile).toBe('function')
-    expect(typeof uni.getSavedFileList).toBe('function')
-    expect(typeof uni.getSavedFileInfo).toBe('function')
-    expect(typeof uni.removeSavedFile).toBe('function')
+    expect(uni.saveFile).toBe(saveFile)
+    expect(uni.getSavedFileList).toBe(getSavedFileList)
+    expect(uni.getSavedFileInfo).toBe(getSavedFileInfo)
+    expect(uni.removeSavedFile).toBe(removeSavedFile)
+    expect(typeof uni.openDocument).toBe('function')
+  })
+
+  it('does not nest the openDocument wrapper on repeated patches', () => {
+    createBridge()
+    const uni: Record<string, any> = {}
+    patchUni(uni)
+    const once = uni.openDocument
+    patchUni(uni)
+
+    expect(uni.openDocument).toBe(once)
   })
 })
 
@@ -77,9 +81,8 @@ describe('saved files', () => {
     const bridge = createBridge({
       'desktop:uni:saveFile': () => ({ savedFilePath: 'desktop-file://f/saved' }),
     })
-    const uni = patchedUni(patchSavedFile)
 
-    const res = await uni.saveFile({ tempFilePath })
+    const res = await saveFile({ tempFilePath })
 
     expect(res).toEqual({ errMsg: 'saveFile:ok', savedFilePath: 'desktop-file://f/saved' })
     // Bytes are transferred as-is; a base64 string would triple peak memory for
@@ -92,11 +95,26 @@ describe('saved files', () => {
 
   it('saveFile reports an unreadable temp path', async () => {
     createBridge()
-    const uni = patchedUni(patchSavedFile)
 
-    await expect(uni.saveFile({ tempFilePath: 'blob:test/gone' }))
+    await expect(saveFile({ tempFilePath: 'blob:test/gone' }))
       .rejects
       .toMatchObject({ errMsg: expect.stringContaining('saveFile:fail') })
+  })
+
+  it('saveFile supports the success/fail/complete callback style', async () => {
+    const tempFilePath = stubTempFile('png-bytes')
+    createBridge({
+      'desktop:uni:saveFile': () => ({ savedFilePath: 'desktop-file://f/saved' }),
+    })
+
+    const success = vi.fn()
+    const complete = vi.fn()
+    const result = saveFile({ tempFilePath, success, complete })
+
+    expect(result).toBeUndefined()
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(success).toHaveBeenCalledWith(expect.objectContaining({ errMsg: 'saveFile:ok' }))
+    expect(complete).toHaveBeenCalled()
   })
 
   it('getSavedFileList returns the file list', async () => {
@@ -105,9 +123,9 @@ describe('saved files', () => {
         fileList: [{ filePath: 'desktop-file://f/saved', size: 5, createTime: 0 }],
       }),
     })
-    const uni = patchedUni(patchSavedFile)
 
-    const res = await uni.getSavedFileList()
+    // Callback mode is not used here, so the promise overload is guaranteed.
+    const res = (await getSavedFileList())!
 
     expect(res.fileList).toHaveLength(1)
   })
@@ -116,18 +134,16 @@ describe('saved files', () => {
     createBridge({
       'desktop:uni:getSavedFileInfo': () => ({ size: 7, createTime: 123 }),
     })
-    const uni = patchedUni(patchSavedFile)
 
-    const res = await uni.getSavedFileInfo({ filePath: 'desktop-file://f/saved' })
+    const res = await getSavedFileInfo({ filePath: 'desktop-file://f/saved' })
 
     expect(res).toEqual({ errMsg: 'getSavedFileInfo:ok', size: 7, createTime: 123 })
   })
 
   it('removeSavedFile resolves with ok', async () => {
     const bridge = createBridge()
-    const uni = patchedUni(patchSavedFile)
 
-    const removed = await uni.removeSavedFile({ filePath: 'desktop-file://f/saved' })
+    const removed = (await removeSavedFile({ filePath: 'desktop-file://f/saved' }))!
 
     expect(removed.errMsg).toBe('removeSavedFile:ok')
     expect(bridge.invoke).toHaveBeenCalledWith('desktop:uni:removeSavedFile', { filePath: 'desktop-file://f/saved' })
@@ -135,9 +151,16 @@ describe('saved files', () => {
 
   it('saveFile fails without tempFilePath', async () => {
     createBridge()
-    const uni = patchedUni(patchSavedFile)
 
-    await expect(uni.saveFile()).rejects.toMatchObject({ errMsg: 'saveFile:fail tempFilePath is required' })
+    await expect(saveFile()).rejects.toMatchObject({ errMsg: 'saveFile:fail tempFilePath is required' })
+  })
+
+  it('fails with a clear error when the desktop bridge is missing', async () => {
+    // A plain browser build has no preload bridge; the error must say so
+    // instead of failing with a TypeError on the undefined bridge.
+    await expect(saveFile({ tempFilePath: stubTempFile('png-bytes') }))
+      .rejects
+      .toMatchObject({ errMsg: expect.stringContaining('desktop bridge unavailable') })
   })
 })
 
@@ -145,10 +168,9 @@ describe('openDocument', () => {
   it('bridges desktop-file paths to the main process', async () => {
     const bridge = createBridge()
     const original = vi.fn()
-    const uni: Record<string, any> = { openDocument: original }
-    patchOpenDocument(uni)
+    const openDocument = createOpenDocument(original)
 
-    const opened = await uni.openDocument({ filePath: 'desktop-file://f/saved' })
+    const opened = await openDocument({ filePath: 'desktop-file://f/saved' }) as { errMsg: string }
 
     expect(opened.errMsg).toBe('openDocument:ok')
     expect(bridge.invoke).toHaveBeenCalledWith('desktop:uni:openDocument', {
@@ -161,10 +183,9 @@ describe('openDocument', () => {
   it('delegates every other path to the uni-h5 implementation', () => {
     createBridge()
     const original = vi.fn(() => 'h5')
-    const uni: Record<string, any> = { openDocument: original }
-    patchOpenDocument(uni)
+    const openDocument = createOpenDocument(original)
 
-    expect(uni.openDocument({ filePath: 'https://example.com/doc.pdf' })).toBe('h5')
+    expect(openDocument({ filePath: 'https://example.com/doc.pdf' })).toBe('h5')
     expect(original).toHaveBeenCalledWith({ filePath: 'https://example.com/doc.pdf' })
   })
 })

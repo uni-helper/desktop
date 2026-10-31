@@ -62,6 +62,22 @@ describe('installDesktopShim', () => {
     expect(uni).toBe((window as any).uni)
   })
 
+  it('keeps patching when uni is replaced later', async () => {
+    const bridge = createBridge()
+    window.__UNI_DESKTOP_BRIDGE__ = bridge
+
+    const { installDesktopShim } = await import('../../src/shim/install')
+    installDesktopShim()
+
+    ;(window as any).uni = { saveFile: () => 'uni-h5' }
+    // uni re-assigns the global at runtime (e.g. the pages-json module after
+    // HMR); the replacement must be patched too or the shim silently dies.
+    const replacement: Record<string, any> = {}
+    ;(window as any).uni = replacement
+
+    expect(typeof replacement.saveFile).toBe('function')
+  })
+
   it('patches uni assigned asynchronously via the deferred fallback', async () => {
     const bridge = createBridge()
     window.__UNI_DESKTOP_BRIDGE__ = bridge
