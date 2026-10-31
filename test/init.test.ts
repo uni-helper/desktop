@@ -28,14 +28,15 @@ describe('init', () => {
     const root = await createProject({
       'package.json': PACKAGE_JSON,
       // uni-app manifest.json is JSONC with #ifdef conditional compilation;
-      // normalizing h5.router must not drop the platform blocks.
+      // normalizing h5.router must not drop the platform blocks. Note the
+      // official constraint that the json stays valid, so no trailing commas.
       'src/manifest.json': `{
   "name": "commented-app",
   "h5": {
     "title": "Commented",
     "router": {
-      "mode": "history",
-    },
+      "mode": "history"
+    }
   },
   // #ifdef MP-WEIXIN
   "mp-weixin": { "appid": "wx123" }
@@ -58,7 +59,7 @@ describe('init', () => {
     const content = `{
   // The app name
   "name": "commented-app",
-  "h5": { "router": { "mode": "hash", "base": "./" } },
+  "h5": { "router": { "mode": "hash", "base": "./" } }
 }
 `
     const root = await createProject({
