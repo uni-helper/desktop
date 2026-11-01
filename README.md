@@ -235,6 +235,7 @@ pages.json / manifest.json 中同样支持（`// #ifdef DESKTOP` 包裹节点，
 | `uni.removeSavedFile` | 未实现（直接 fail） | 删除应用管理目录内的文件 |
 | `uni.openDocument` | `window.open(filePath)` | **唯一例外**：`desktop-file://` 路径交给系统默认程序打开，其余路径仍走 H5 原版 |
 | `uni.getUpdateManager` | 未实现 | 返回 uni 规范的更新管理器，桥接 electron-updater 事件；纯浏览器环境返回 undefined |
+| `uni.getFileSystemManager` | 未实现 | 初期子集（设计见 `docs/design/fs-manager.md`）：管理目录内的 `readFile` / `writeFile`，路径一律过遏制校验 |
 
 `uni.setClipboardData`、`uni.getClipboardData`、`uni.chooseImage`、`uni.chooseVideo`、`uni.chooseFile` 等 H5 已实现的 API 不会被改写，行为与 H5 一致。
 

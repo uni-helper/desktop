@@ -519,6 +519,48 @@ describe('app lifecycle', () => {
   })
 })
 
+describe('fs manager prototype', () => {
+  it('readFile returns bytes for a file inside the root', async () => {
+    await boot()
+    await mkdir(savedRoot(), { recursive: true })
+    const filePath = join(savedRoot(), 'doc.txt')
+    await writeFile(filePath, 'managed-content')
+    const handler = state.ipcHandlers.get('desktop:uni:fs:readFile')!
+
+    const res = await handler({}, { filePath }) as { data: ArrayBuffer }
+
+    expect(new TextDecoder().decode(new Uint8Array(res.data))).toBe('managed-content')
+  })
+
+  it('writeFile overwrites an existing file inside the root', async () => {
+    await boot()
+    await mkdir(savedRoot(), { recursive: true })
+    const filePath = join(savedRoot(), 'doc.txt')
+    await writeFile(filePath, 'old')
+    const handler = state.ipcHandlers.get('desktop:uni:fs:writeFile')!
+
+    await expect(handler({}, { filePath, data: new TextEncoder().encode('new') })).resolves.toEqual({})
+    expect(await readFile(filePath, 'utf8')).toBe('new')
+  })
+
+  it('fs handlers reject paths outside the root and traversal urls', async () => {
+    await boot()
+    await mkdir(savedRoot(), { recursive: true })
+    const outsidePath = join(userDataPath, 'outside.txt')
+    await writeFile(outsidePath, 'x')
+    const read = state.ipcHandlers.get('desktop:uni:fs:readFile')!
+    const write = state.ipcHandlers.get('desktop:uni:fs:writeFile')!
+
+    await expect(read({}, { filePath: outsidePath })).rejects.toThrow('outside the managed directories')
+    await expect(write({}, { filePath: `desktop-file://f/${encodeURIComponent('../../etc')}`, data: new Uint8Array(1) }))
+      .rejects
+      .toThrow()
+    await expect(write({}, { filePath: join(savedRoot(), 'missing.txt'), data: new Uint8Array(1) }))
+      .rejects
+      .toThrow()
+  })
+})
+
 describe('tray actions', () => {
   async function bootWithTray(): Promise<any[]> {
     runtime.createDesktopApp({

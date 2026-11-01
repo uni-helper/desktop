@@ -10,7 +10,7 @@ import { createConsola } from 'consola/basic'
 import { app, BrowserWindow, ipcMain, Menu, protocol, shell, Tray } from 'electron'
 import { APP_RESOURCES_DIR, APP_WEB_DIR, PRELOAD_BUNDLE_FILE } from '../shared/paths'
 import { DESKTOP_FILE_SCHEME, EXTENSION_BY_MIME, mimeFromExtension, parseDesktopFileUrl, toDesktopFileUrl } from '../shared/protocol'
-import { shimChannels, updaterChannels, updaterEventChannel, windowChannels } from '../shim/channels'
+import { fsChannels, shimChannels, updaterChannels, updaterEventChannel, windowChannels } from '../shim/channels'
 
 export type { BakedDesktopConfig } from '../baked'
 export { DESKTOP_FILE_SCHEME, parseDesktopFileUrl, toDesktopFileUrl }
@@ -238,6 +238,28 @@ function registerIpcHandlers(): void {
       throw new Error('no downloaded update')
     const { autoUpdater } = await import('electron-updater')
     autoUpdater.quitAndInstall()
+  })
+
+  // getFileSystemManager prototype (docs/design/fs-manager.md): the managed
+  // saved directory is the only root, same caps as saveFile.
+  ipcMain.handle(fsChannels.readFile, async (_event, payload) => {
+    const data = assertObjectPayload(payload)
+    const filePath = await pathFromManagedValue(data.filePath, [savedRoot()], 'filePath')
+    return { data: await readFile(filePath) }
+  })
+  ipcMain.handle(fsChannels.writeFile, async (_event, payload) => {
+    const data = assertObjectPayload(payload)
+    const bytes = data.data
+    if (!(bytes instanceof Uint8Array) && !(bytes instanceof ArrayBuffer))
+      throw new TypeError('data must be a string or ArrayBuffer')
+    if (bytes.byteLength > MAX_SAVE_BYTES)
+      throw new Error(`file exceeds the ${MAX_SAVE_BYTES} byte limit`)
+    // The prototype overwrites existing managed files only: realpath containment
+    // needs an existing target. Creating new files needs a realpath-the-parent
+    // helper, listed as the full implementation's infrastructure step.
+    const target = await pathFromManagedValue(data.filePath, [savedRoot()], 'filePath')
+    await writeFile(target, bytes instanceof ArrayBuffer ? new Uint8Array(bytes) : bytes)
+    return {}
   })
 }
 

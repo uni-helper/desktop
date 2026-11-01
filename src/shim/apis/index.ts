@@ -1,3 +1,4 @@
+export { fsReadFile, fsWriteFile, getFileSystemManager } from './fs'
 /**
  * Desktop implementations for the APIs uni-h5 does not implement (saved-file
  * management) and the one deliberate override of an API it does (`openDocument`,

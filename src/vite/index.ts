@@ -45,6 +45,7 @@ export * from '${UNI_H5_ID}'
 import { openDocument as openDocumentH5 } from '${UNI_H5_ID}'
 import { createOpenDocument } from '${DESKTOP_APIS_IMPORT}'
 export { ${SAVED_FILE_APIS.join(', ')} } from '${DESKTOP_APIS_IMPORT}'
+export { getFileSystemManager } from '${DESKTOP_APIS_IMPORT}'
 export const openDocument = createOpenDocument(openDocumentH5)
 installDesktopShim()
 `

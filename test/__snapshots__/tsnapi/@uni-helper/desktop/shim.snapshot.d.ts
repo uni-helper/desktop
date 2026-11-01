@@ -11,7 +11,7 @@ export declare function installDesktopShim(): void;
 // #endregion
 
 // #region Variables
-export declare const allShimChannels: (ShimChannel | WindowChannel | UpdaterChannel)[];
+export declare const allShimChannels: (ShimChannel | WindowChannel | UpdaterChannel | FsChannel)[];
 export declare const shimChannels: {
   readonly saveFile: "desktop:uni:saveFile";
   readonly getSavedFileList: "desktop:uni:getSavedFileList";

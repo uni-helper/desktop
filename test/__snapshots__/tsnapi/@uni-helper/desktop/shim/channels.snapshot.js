@@ -3,6 +3,7 @@
  */
 // #region Variables
 export var allShimChannels /* const */
+export var fsChannels /* const */
 export var shimChannels /* const */
 export var updaterChannels /* const */
 export var updaterEventChannel /* const */

@@ -1,4 +1,4 @@
-import { createOpenDocument, getSavedFileInfo, getSavedFileList, getUpdateManager, removeSavedFile, saveFile } from './apis/index'
+import { createOpenDocument, getFileSystemManager, getSavedFileInfo, getSavedFileList, getUpdateManager, removeSavedFile, saveFile } from './apis/index'
 
 /** Objects already patched, so repeated installs never double-wrap. */
 const patched = new WeakSet<object>()
@@ -24,4 +24,7 @@ export function patchUni(uni: Record<string, any>): void {
   uni.openDocument = createOpenDocument(uni.openDocument)
   // A factory, assigned as-is to match uni's call pattern `uni.getUpdateManager()`.
   uni.getUpdateManager = getUpdateManager
+  // A factory like getUpdateManager: uni-h5 does not implement the file system
+  // manager, so the shim provides the prototype subset (docs/design/fs-manager.md).
+  uni.getFileSystemManager = getFileSystemManager
 }

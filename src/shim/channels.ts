@@ -42,9 +42,21 @@ export type UpdaterChannel = (typeof updaterChannels)[keyof typeof updaterChanne
 /** Main→renderer updater events; main pushes, the preload hook delivers. */
 export const updaterEventChannel = 'desktop:updater:event'
 
+/**
+ * File-system channels (prototype subset, see docs/design/fs-manager.md). One
+ * channel per method for allowlist granularity, matching `shimChannels`.
+ */
+export const fsChannels = {
+  readFile: 'desktop:uni:fs:readFile',
+  writeFile: 'desktop:uni:fs:writeFile',
+} as const
+
+export type FsChannel = (typeof fsChannels)[keyof typeof fsChannels]
+
 /** The preload's deny-by-default invoke allowlist: every channel the shim may call. */
-export const allShimChannels: (ShimChannel | WindowChannel | UpdaterChannel)[] = [
+export const allShimChannels: (ShimChannel | WindowChannel | UpdaterChannel | FsChannel)[] = [
   ...Object.values(shimChannels),
   ...Object.values(windowChannels),
   ...Object.values(updaterChannels),
+  ...Object.values(fsChannels),
 ]
