@@ -1,7 +1,6 @@
 import type { MenuItemConstructorOptions } from 'electron'
 import type { BakedDesktopConfig } from '../baked'
 import { randomUUID } from 'node:crypto'
-import { existsSync } from 'node:fs'
 import { mkdir, readdir, readFile, realpath, stat, unlink, writeFile } from 'node:fs/promises'
 import { join, sep } from 'node:path'
 import process from 'node:process'
@@ -43,11 +42,14 @@ function assetsRoot(): string {
   return join(__dirname, '..', 'resources')
 }
 
+/**
+ * Absolute path of an asset inside the app resources directory. Existence is
+ * not re-checked here: the config resolver validated the sources and
+ * `copyAssets` copied them, so a missing file surfaces through Electron
+ * directly instead of degrading silently.
+ */
 function assetPath(fileName: string | undefined): string | undefined {
-  if (!fileName)
-    return undefined
-  const candidate = join(assetsRoot(), fileName)
-  return existsSync(candidate) ? candidate : undefined
+  return fileName ? join(assetsRoot(), fileName) : undefined
 }
 
 /**

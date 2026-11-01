@@ -18,12 +18,7 @@ export function getTemplateDir(): string {
   throw new Error(`cannot locate the desktop main process templates near ${here}`)
 }
 
-/** Absolute path to the default main process template. */
-function getDefaultMainEntry(): string {
-  return join(getTemplateDir(), 'main.ts')
-}
-
 /** Resolve the main process entry: a project-relative custom entry or the template. */
 export function resolveMainEntry(root: string, mainEntry: string | undefined): string {
-  return mainEntry ? join(root, mainEntry) : getDefaultMainEntry()
+  return mainEntry ? join(root, mainEntry) : join(getTemplateDir(), 'main.ts')
 }

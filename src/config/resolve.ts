@@ -80,18 +80,12 @@ const DEFAULT_WINDOW: ResolvedWindowConfig = {
 
 /** Resolve a window config against the defaults, dropping undefined overrides. */
 function resolveWindow(config: DesktopWindowConfig | undefined, fallbackTitle: string): ResolvedWindowConfig {
-  const merged: ResolvedWindowConfig = {
+  return {
     ...DEFAULT_WINDOW,
-    ...stripUndefined(config),
+    // Explicit `undefined` overrides must not clobber the defaults.
+    ...Object.fromEntries(Object.entries(config ?? {}).filter(([, entry]) => entry !== undefined)),
     title: config?.title ?? fallbackTitle,
   }
-  return merged
-}
-
-function stripUndefined<T extends object>(value: T | undefined): Partial<T> {
-  if (!value)
-    return {}
-  return Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined)) as Partial<T>
 }
 
 async function readManifest(root: string): Promise<ManifestInfo | undefined> {

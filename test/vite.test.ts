@@ -168,12 +168,14 @@ describe('isDesktopBuild', () => {
     expect(isDesktopBuild()).toBe(false)
   })
 
-  it('normalizes keys like uni does and tolerates malformed json', () => {
+  it('normalizes keys like uni does', () => {
     process.env.UNI_CUSTOM_CONTEXT = JSON.stringify({ desktop: true })
     expect(isDesktopBuild()).toBe(true)
+  })
 
+  it('fails loudly on malformed json instead of silently skipping the build', () => {
     process.env.UNI_CUSTOM_CONTEXT = 'not json'
-    expect(isDesktopBuild()).toBe(false)
+    expect(() => isDesktopBuild()).toThrow()
   })
 })
 

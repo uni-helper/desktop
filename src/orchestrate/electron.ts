@@ -32,12 +32,13 @@ const KILL_TIMEOUT = 5000
 
 /**
  * Kill a spawned process and, on POSIX, its whole process group. Resolves once
- * the process is gone, escalating to SIGKILL when it ignores SIGTERM, so callers
- * never leak an orphan that keeps the port or the window alive.
+ * the process is really gone, escalating to SIGKILL when it ignores SIGTERM, so
+ * callers never leak an orphan that keeps the port or the window alive and
+ * never respawn while the old process is still dying.
  */
-export function killTree(child: ChildProcess | undefined): Promise<void> {
+export async function killTree(child: ChildProcess | undefined): Promise<void> {
   if (!child?.pid || child.exitCode !== null || child.signalCode !== null)
-    return Promise.resolve()
+    return
 
   const pid = child.pid
   const exited = new Promise<void>((resolvePromise) => {
@@ -60,18 +61,8 @@ export function killTree(child: ChildProcess | undefined): Promise<void> {
 
   signal('SIGTERM')
 
-  return Promise.race([
-    exited,
-    new Promise<void>((resolvePromise) => {
-      const timer = setTimeout(() => {
-        signal('SIGKILL')
-        resolvePromise()
-      }, KILL_TIMEOUT)
-      timer.unref()
-      void exited.then(() => {
-        clearTimeout(timer)
-        resolvePromise()
-      })
-    }),
-  ])
+  const timer = setTimeout(signal, KILL_TIMEOUT, 'SIGKILL')
+  timer.unref()
+  await exited
+  clearTimeout(timer)
 }

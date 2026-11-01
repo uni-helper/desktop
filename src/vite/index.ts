@@ -160,11 +160,11 @@ export function uniDesktop(): Plugin {
       project = await ensureDesktopProject(root)
     },
     async closeBundle() {
-      if (!desktop || !project)
+      // `project` is only set for desktop builds, and vite runs configResolved
+      // and buildStart before closeBundle, so both are set here.
+      if (!project)
         return
-      const webDir = viteConfig
-        ? resolve(viteConfig.root, viteConfig.build.outDir)
-        : resolve(root, 'dist/build/h5')
+      const webDir = resolve(viteConfig!.root, viteConfig!.build.outDir)
       await assembleDesktopApp(project.resolved, webDir)
     },
   }

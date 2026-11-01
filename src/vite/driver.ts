@@ -23,24 +23,18 @@ export interface DesktopDevRuntimeHandle {
 /**
  * Whether the running uni build targets the desktop platform: uni resolves the
  * custom script and exposes its `define` through `UNI_CUSTOM_CONTEXT`. Keys are
- * normalized the same way uni normalizes them (`-` to `_`, uppercased).
+ * normalized the same way uni normalizes them (`-` to `_`, uppercased). The
+ * value is always JSON uni itself stringified, so a malformed one fails loudly
+ * instead of silently skipping the whole desktop pipeline.
  */
 export function isDesktopBuild(): boolean {
   const raw = process.env.UNI_CUSTOM_CONTEXT
   if (!raw)
     return false
-  try {
-    const context: unknown = JSON.parse(raw)
-    if (context && typeof context === 'object' && !Array.isArray(context)) {
-      return Object.entries(context as Record<string, unknown>).some(
-        ([key, value]) => key.replace(/-/g, '_').toUpperCase() === 'DESKTOP' && Boolean(value),
-      )
-    }
-  }
-  catch {
-    // A malformed value is uni's to reject, not ours to fail on.
-  }
-  return false
+  const context = JSON.parse(raw) as Record<string, unknown>
+  return Object.entries(context).some(
+    ([key, value]) => key.replace(/-/g, '_').toUpperCase() === 'DESKTOP' && Boolean(value),
+  )
 }
 
 /**
@@ -92,8 +86,9 @@ export async function startDesktopDevRuntime(resolved: ResolvedConfig, url: stri
     electronProcess.once('exit', (code) => {
       logger.info(`electron exited with code ${code}`)
     })
-    rejectOnSpawnError(electronProcess, 'electron').catch((error: DesktopError) => {
-      logger.error(error.message)
+    // A spawn failure (e.g. the binary vanished) must not crash the uni process.
+    electronProcess.once('error', (error) => {
+      logger.error(`failed to start electron: ${error.message}`)
     })
   }
   async function restartElectron(): Promise<void> {
@@ -122,15 +117,6 @@ export async function startDesktopDevRuntime(resolved: ResolvedConfig, url: stri
       await Promise.all([killTree(electronProcess), watcher?.dispose()])
     },
   }
-}
-
-/** Attach the error listener spawn needs so a missing binary rejects instead of crashing. */
-function rejectOnSpawnError(emitter: ChildProcess, label: string): Promise<never> {
-  return new Promise<never>((_, reject) => {
-    emitter.once('error', (error) => {
-      reject(new DesktopError(`failed to start ${label}: ${error.message}`))
-    })
-  })
 }
 
 /**

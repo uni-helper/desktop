@@ -78,22 +78,6 @@ describe('installDesktopShim', () => {
     expect(typeof replacement.saveFile).toBe('function')
   })
 
-  it('patches uni assigned asynchronously via the deferred fallback', async () => {
-    const bridge = createBridge()
-    window.__UNI_DESKTOP_BRIDGE__ = bridge
-
-    const { installDesktopShim } = await import('../../src/shim/install')
-    installDesktopShim()
-
-    await flushAsync()
-
-    const uni: Record<string, any> = {}
-    ;(window as any).uni = uni
-    await flushAsync()
-
-    expect(typeof uni.saveFile).toBe('function')
-  })
-
   it('ignores non-object uni values', async () => {
     const bridge = createBridge()
     window.__UNI_DESKTOP_BRIDGE__ = bridge

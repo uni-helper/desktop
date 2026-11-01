@@ -56,8 +56,7 @@ async function readPackageJson(root: string): Promise<ProjectPackage> {
  * user-maintained entry without them changes compile semantics; surface that
  * instead of silently rewriting their define.
  */
-async function checkDesktopUniScript(root: string): Promise<void> {
-  const pkg = await readPackageJson(root)
+function checkDesktopUniScript(pkg: ProjectPackage): void {
   const script = pkg['uni-app']?.scripts?.[DESKTOP_SCRIPT_NAME]
   if (!script)
     throw new DesktopError(`package.json has no \`uni-app.scripts.${DESKTOP_SCRIPT_NAME}\` custom platform`)
@@ -70,9 +69,8 @@ async function checkDesktopUniScript(root: string): Promise<void> {
 }
 
 /** npm scripts are pure conveniences: add the ones that are missing, quietly. */
-async function ensureDesktopScripts(root: string): Promise<void> {
+async function ensureDesktopScripts(root: string, pkg: ProjectPackage): Promise<void> {
   const pkgPath = join(root, 'package.json')
-  const pkg = await readPackageJson(root)
   const missing = Object.entries(DESKTOP_SCRIPTS).filter(([name]) => !pkg.scripts?.[name])
   if (missing.length === 0)
     return
@@ -148,8 +146,7 @@ async function ensureUnhConfig(root: string, appName: string): Promise<void> {
 }
 
 /** Offer to install the electron tooling the current command is about to need. */
-async function ensureDependencies(root: string, needsPack: boolean, needsUpdater: boolean, interactive: boolean): Promise<void> {
-  const pkg = await readPackageJson(root)
+async function ensureDependencies(root: string, pkg: ProjectPackage, needsPack: boolean, needsUpdater: boolean, interactive: boolean): Promise<void> {
   const has = (name: string): boolean => Boolean(pkg.dependencies?.[name] ?? pkg.devDependencies?.[name])
   const needed: string[] = []
   if (!has('electron'))
@@ -192,15 +189,18 @@ export async function ensureDesktopProject(
   const interactive = options.interactive ?? process.stdout.isTTY === true
   if (checkedRoot !== root) {
     checkedRoot = root
+    // One package.json read flows through every check below; adding scripts
+    // never touches dependencies, so the shared object stays valid.
+    const pkg = await readPackageJson(root)
     // Validate the platform entry first: an unusable one should stop the run
     // before any file gets rewritten.
-    await checkDesktopUniScript(root)
+    checkDesktopUniScript(pkg)
     await ensureManifestRouter(root, interactive)
     await ensureShimImport(root, interactive)
-    await ensureDesktopScripts(root)
+    await ensureDesktopScripts(root, pkg)
     const probe = await resolveDesktopConfig(root)
     await ensureUnhConfig(root, probe.resolved.appName)
-    await ensureDependencies(root, probe.resolved.pack.autoPack, probe.resolved.updater !== false, interactive)
+    await ensureDependencies(root, pkg, probe.resolved.pack.autoPack, probe.resolved.updater !== false, interactive)
   }
 
   const result = await resolveDesktopConfig(root)
