@@ -18,7 +18,6 @@
     "electron",
     "desktop",
     "packaging",
-    "cli",
     "shim",
     "uni-helper"
   ],
@@ -39,9 +38,6 @@
     "./package.json": "./package.json"
   },
   "types": "./dist/index.d.mts",
-  "bin": {
-    "uni-desktop": "./dist/cli.mjs"
-  },
   "files": [
     "dist"
   ],
@@ -84,8 +80,8 @@
     }
   },
   "dependencies": {
+    "@clack/prompts": "catalog:build",
     "@uni-helper/jsonu": "catalog:build",
-    "cac": "catalog:cli",
     "consola": "catalog:build",
     "esbuild": "catalog:build",
     "unconfig": "catalog:build"

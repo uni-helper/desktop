@@ -1,21 +1,13 @@
 import type { ResolvedConfig } from '../config/resolve'
-import { existsSync, readFileSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
 import process from 'node:process'
-import { resolveDesktopConfig } from '../config/resolve'
 import { DesktopError } from '../error'
 import { logger } from '../log'
-import { APP_DIR, APP_RESOURCES_DIR, appIconFileName } from '../shared/paths'
+import { APP_RESOURCES_DIR, appIconFileName } from '../shared/paths'
 import { detectPackageManager, spawnAwait } from './pm'
-
-export interface PackOptions {
-  /** Project root, defaults to process.cwd() */
-  cwd?: string
-  /** Extra arguments appended to the electron-builder CLI, e.g. `['--publish', 'always']` */
-  args?: string[]
-}
 
 export interface PackResult {
   output: string
@@ -133,14 +125,4 @@ export async function packInternal(
   logger.start(`running electron-builder via ${pm} (electron ${electronVersion})...`)
   await spawnAwait(process.execPath, [cli, '--config', configPath, ...extraArgs], { cwd: appDir })
   return { output: join(root, resolved.pack.output) }
-}
-
-/** Package an already-built `dist/desktop` directory with electron-builder. */
-export async function pack(options: PackOptions = {}): Promise<PackResult> {
-  const { resolved } = await resolveDesktopConfig(options.cwd)
-  const root = resolved.root
-  const appDir = join(root, APP_DIR)
-  if (!existsSync(join(appDir, 'package.json')))
-    throw new DesktopError(`no desktop app found at ${appDir}, run \`uni-desktop build\` first`)
-  return packInternal(root, resolved, appDir, options.args)
 }

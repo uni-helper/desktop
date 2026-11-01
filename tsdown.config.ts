@@ -6,16 +6,12 @@ export default defineConfig([
     entry: {
       'index': 'src/index.ts',
       'runtime/index': 'src/runtime/index.ts',
-      'cli': 'src/cli/index.ts',
     },
     deps: {
       // `vite` is a devDependency used only for types in `src/vite`; consumers
       // always run the plugin inside their own vite, where the types resolve.
       neverBundle: ['electron', 'electron-updater', 'vite'],
     },
-    // Only the `uni-desktop` bin gets a shebang; index.mjs is imported by
-    // user tooling and must stay a plain ES module.
-    banner: ({ fileName }) => fileName.startsWith('cli.') ? '#!/usr/bin/env node' : undefined,
     dts: true,
     publint: true,
     plugins: [

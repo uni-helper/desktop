@@ -4,42 +4,44 @@
 [![npm downloads][npm-downloads-src]][npm-downloads-href]
 [![License][license-src]][license-href]
 
-让 uni-app（Vue3 + Vite CLI 工程）获得打包成 Electron 桌面应用的能力：SDK 配置驱动的 dev/build/pack 编排，外加一层 uni API 桌面垫片，用户代码保持标准 `uni.xxx` 写法、跨端零改动。
+让 uni-app（Vue3 + Vite CLI 工程）获得打包成 Electron 桌面应用的能力：桌面端是 uni 的一个自定义平台，`uni dev -p desktop` 直接打开 Electron 窗口、`uni build -p desktop` 直接产出安装包；外加一层 uni API 桌面垫片，用户代码保持标准 `uni.xxx` 写法、跨端零改动。
 
 ## 特性
 
-- **`uni-desktop dev`**：启动 H5 dev server，就绪后自动打开 Electron 窗口加载它，渲染进程走 Vite 热更新，主进程改动自动重启窗口
-- **`uni-desktop build`**：构建 H5 产物，组装成 Electron 应用目录（`dist/desktop`），再用 electron-builder 生成 Windows（NSIS）/ macOS（dmg）/ Linux（AppImage）安装包
-- **`uni-desktop pack`**：对已组装的 `dist/desktop` 单独打包
-- **`uni-desktop init`**：脚手架 `unh.config.ts`、规范化 manifest.json（hash 路由 + 相对 base）、安装依赖
+- **真平台体验**：`uni dev -p desktop` 在 dev server 就绪后自动打开 Electron 窗口（Vite 热更新、主进程改动自动重启）；`uni build -p desktop` 组装 `dist/desktop` 并用 electron-builder 生成 Windows（NSIS）/ macOS（dmg）/ Linux（AppImage）安装包
+- **自定义条件编译平台**：`#ifdef DESKTOP` 覆盖 js/模板/css/pages.json/manifest.json，`#ifdef H5` 只代表浏览器构建
+- **启动自检**：首次运行自动补齐 manifest.json 路由规范、垫片导入、`unh.config.ts`、npm scripts，缺依赖时交互式安装（TTY 下逐项确认，CI 自动应用安全项）
 - **uni API 垫片**：只补 H5 端没有实现的内置 API（`uni.saveFile` / `getSavedFileList` / `getSavedFileInfo` / `removeSavedFile`），外加 `openDocument` 对 `desktop-file://` 的桥接；H5 已实现的 API 一律沿用 uni-h5 原版，纯浏览器环境整体 no-op
 - **SDK 配置**：所有窗口、托盘、更新、打包选项集中在 `unh.config.ts` 的 `desktop` 键下，未覆盖的值回退到 `manifest.json`
+- **零 CLI**：没有 `uni-desktop` 命令，唯一接线是一个 vite 插件，其余全部通过 uni 自己的平台机制驱动
 
 ## 使用
 
 ### 已有 uni-app 项目
 
-在项目根目录执行：
-
-```sh
-pnpm dlx @uni-helper/desktop init
-```
-
-`init` 会完成：写入 `unh.config.ts`、追加 `desktop:*` 脚本、把 manifest.json 的 `h5.router` 规范为 hash 路由 + `./` base、在 `src/main.ts` 首行注入垫片导入、在 `vite.config.ts` 注册 `uniDesktop` 插件、安装依赖。
-
-也可以手动安装：
+安装依赖：
 
 ```sh
 pnpm add -D @uni-helper/desktop electron electron-builder electron-updater
 ```
 
-然后做两处接线。其一，`src/main.ts` 首行引入垫片（dev server 走全局 `uni` 时由它打补丁）：
+做两处接线。其一，在 package.json 声明桌面平台（uni 官方的自定义条件编译平台，缺少它时运行会得到明确报错与可粘贴片段，见[条件编译](#条件编译)）：
 
-```ts
-import '@uni-helper/desktop/shim'
+```json
+{
+  "uni-app": {
+    "scripts": {
+      "desktop": {
+        "title": "Desktop",
+        "env": { "UNI_PLATFORM": "h5" },
+        "define": { "DESKTOP": true, "H5": false, "WEB": false }
+      }
+    }
+  }
+}
 ```
 
-其二，`vite.config.ts` 注册 `uniDesktop` 插件（编译产物里 uni 会把所有 `uni.xxx` 调用重写为对 `@dcloudio/uni-h5` 的具名导入，不走全局对象，必须靠它在模块层拦截替换）：
+其二，`vite.config.ts` 注册 `uniDesktop` 插件（编译产物里 uni 会把所有 `uni.xxx` 调用重写为对 `@dcloudio/uni-h5` 的具名导入，必须靠它在模块层拦截替换；dev 下它还负责驱动 Electron）：
 
 ```ts
 import uni from '@dcloudio/vite-plugin-uni'
@@ -51,28 +53,31 @@ export default defineConfig({
 })
 ```
 
+其余的交给启动自检：第一次运行时自动补齐 `src/main.ts` 的垫片导入（dev 下全局 `uni` 依赖它）、把 manifest.json 的 `h5.router` 规范为 hash 路由 + `./` base（file:// 加载要求）、创建 `unh.config.ts`、追加 `dev:desktop` / `build:desktop` npm scripts；缺依赖时交互式询问安装。TTY 中逐项确认，CI（非 TTY）自动应用安全项并打印提示。
+
 ### 开发
 
 ```sh
-pnpm desktop:dev            # 等价于 uni-desktop dev
-pnpm desktop:dev -- --url http://localhost:3000   # 覆盖 dev.url
+uni dev -p desktop          # 等价于 pnpm dev:desktop
+pnpm dev:desktop
 ```
 
-dev server 就绪后 Electron 窗口自动打开，正常使用 Vite 热更新。
+dev server 就绪后 Electron 窗口自动打开，正常使用 Vite 热更新；主进程改动自动重启窗口，渲染进程改动走 uni dev server 的 HMR。
 
 ### 构建与打包
 
 ```sh
-pnpm desktop:build          # H5 构建 + 组装 dist/desktop + electron-builder 打包
-pnpm desktop:build -- --no-pack   # 只组装，不出安装包（覆盖 pack.autoPack）
-pnpm desktop:build -- --pack      # 强制打包（覆盖 pack.autoPack: false）
-pnpm desktop:pack           # 对已有 dist/desktop 单独打包
-pnpm desktop:pack -- --publish always   # 额外参数原样透传给 electron-builder
+uni build -p desktop        # 等价于 pnpm build:desktop
+pnpm build:desktop          # H5 构建 + 组装 dist/desktop + electron-builder 打包
 ```
+
+组装产物在 `dist/desktop`，安装包输出到 `dist/release`（可通过 `pack.output` 修改）。`pack.autoPack: false` 时只组装不出安装包。
 
 `electron` 的版本会从项目自身的依赖中读取并写入 electron-builder 配置（`electronVersion`），因此不必在 `package.json` 里把版本写死。Linux 的 `deb` 目标额外要求 `app.author` 与 `app.homepage`，两者默认从项目 `package.json` 的 `author` / `homepage` 读取。
 
-安装包输出到 `dist/release`（可通过 `pack.output` 修改）。图标通过 `app.icon` 指定，建议提供一张 512x512 以上的 PNG；不配置时使用内置的 uni-helper 图标，因此窗口、Dock/任务栏、托盘和安装包都不会退回 Electron 的默认图标。macOS 上 dev 模式会把 Electron 的 app bundle 克隆到 `.uni-desktop/dev-electron` 并改写其中的应用名与图标（adhoc 重签后启动，按 electron 版本 / 应用名 / 图标缓存），Dock 从启动那一刻起就显示配置的应用名和图标而不是 "Electron"；克隆失败时回退为直接启动 Electron，由运行时的 `app.dock.setIcon` 兜底设置图标。
+图标通过 `app.icon` 指定，建议提供一张 512x512 以上的 PNG；不配置时使用内置的 uni-helper 图标，因此窗口、Dock/任务栏、托盘和安装包都不会退回 Electron 的默认图标。macOS 上 dev 模式会把 Electron 的 app bundle 克隆到 `.uni-desktop/dev-electron` 并改写其中的应用名与图标（adhoc 重签后启动，按 electron 版本 / 应用名 / 图标缓存），Dock 从启动那一刻起就显示配置的应用名和图标而不是 "Electron"；克隆失败时回退为直接启动 Electron，由运行时的 `app.dock.setIcon` 兜底设置图标。
+
+dev 模式下桌面壳由 uni 进程通过 IPC 启动，uni 进程退出时壳自动关闭，不会残留孤儿窗口。
 
 命令行进度输出由 [consola](https://github.com/unjs/consola) 渲染：终端里按级别着色（`start` / `info` / `success` / `warn` / `error`），每行带 `[uni-desktop]` 标签，方便和 dev server、Electron 自身的输出区分；输出被重定向或运行在 CI 时自动退化为不带颜色的纯文本。
 
@@ -82,7 +87,7 @@ pnpm desktop:pack -- --publish always   # 额外参数原样透传给 electron-b
 
 ## 配置
 
-在项目根目录创建 `unh.config.ts`（`defineConfig` 提供类型提示）。所有桌面端配置都放在 `desktop` 键下，这样同一个文件还能承载其他 uni-helper 工具的顶层配置：
+在项目根目录创建 `unh.config.ts`（`defineConfig` 提供类型提示；首次运行缺文件时会自动创建）。所有桌面端配置都放在 `desktop` 键下，这样同一个文件还能承载其他 uni-helper 工具的顶层配置：
 
 ```ts
 import { defineConfig } from '@uni-helper/desktop'
@@ -110,14 +115,9 @@ export default defineConfig({
       backgroundColor: '#ffffff',
     },
     dev: {
-      url: 'http://localhost:5173', // Electron 在 dev 模式加载的地址
-      command: 'dev:h5', // 启动 H5 dev server 的 npm script
-      waitTimeout: 60000, // 等待 URL 可访问的超时
-      interval: 500, // 探测间隔
+      // 缺省时加载 uni dev server 实际监听的地址；仅在壳需要加载别的地址时设置
+      url: 'http://localhost:5173',
       openDevtools: true, // 自动打开 DevTools
-    },
-    build: {
-      command: 'build:h5', // 构建 H5 的 npm script
     },
     tray: { // 设为 false 关闭托盘
       icon: 'static/tray.png', // 省略时回退到 app.icon
@@ -134,7 +134,7 @@ export default defineConfig({
       entry: 'desktop/main.ts', // 自定义主进程入口（可选）
     },
     pack: {
-      autoPack: true, // build 后自动运行 electron-builder
+      autoPack: true, // `uni build -p desktop` 后自动运行 electron-builder
       output: 'dist/release',
       asar: true,
       targets: {
@@ -151,11 +151,66 @@ export default defineConfig({
 
 `unh.config.ts` 由 [unconfig](https://github.com/unocss/unocss/tree/main/packages/unconfig) 加载，因此 `unh.config.{ts,mts,js,mjs,cjs,json}` 都可以使用。`desktop` 之外的顶层键会被忽略，留给其他工具消费。
 
-`manifest.json` 由 [@uni-helper/jsonu](https://github.com/uni-helper/jsonu) 解析，支持 uni-app 的 `#ifdef` 条件编译注释，按 H5 平台求值。`init` 补全 `h5.router` 时会保留条件编译块（重写文件时普通注释会被移除，仅条件编译注释往返保留）。
+`manifest.json` 由 [@uni-helper/jsonu](https://github.com/uni-helper/jsonu) 解析，支持 uni-app 的 `#ifdef` 条件编译注释，按 DESKTOP 平台求值（与编译期视图一致，见[条件编译](#条件编译)）。启动自检补全 `h5.router` 时会保留条件编译块（重写文件时普通注释会被移除，仅条件编译注释往返保留）。
 
 所有字段都是可选的，未配置的值按 `defaults < manifest.json < unh.config.ts 的 desktop` 合并。
 
-> 要求：manifest.json 的 `h5.router.mode` 必须是 `hash`、`h5.router.base` 必须是 `./`，否则 file:// 加载会白屏。`init` 会自动设置，构建时也会校验并告警。
+> 要求：manifest.json 的 `h5.router.mode` 必须是 `hash`、`h5.router.base` 必须是 `./`，否则 file:// 加载会白屏。启动自检会自动设置并校验告警。
+
+## 条件编译
+
+桌面端是 uni 官方的自定义条件编译平台，在 package.json 中声明（使用章节的接线步骤之一）：
+
+```json
+{
+  "uni-app": {
+    "scripts": {
+      "desktop": {
+        "title": "Desktop",
+        "env": { "UNI_PLATFORM": "h5" },
+        "define": { "DESKTOP": true, "H5": false, "WEB": false }
+      }
+    }
+  }
+}
+```
+
+`DESKTOP` 是一个独立平台：uni 编译器在所有支持条件编译的文件中保留 `#ifdef DESKTOP` 块；`H5` / `WEB` 被置为 false，桌面构建中 `#ifdef H5` 与其他平台一样被剔除（`H5` 只代表浏览器构建）。想让同一段代码在浏览器与桌面都生效，用 `#ifdef H5 || DESKTOP` 或写在条件块外：
+
+```js
+// #ifdef DESKTOP
+console.log('只在桌面端执行')
+// #endif
+
+// #ifndef DESKTOP
+console.log('非桌面端执行（纯浏览器打开时）')
+// #endif
+```
+
+```vue
+<!-- #ifdef DESKTOP -->
+<button @click="minimize">
+  最小化窗口
+</button>
+<!-- #endif -->
+
+<style>
+/* css 中必须用块注释 */
+/* #ifdef DESKTOP */
+.titlebar { display: block; }
+/* #endif */
+</style>
+```
+
+pages.json / manifest.json 中同样支持（`// #ifdef DESKTOP` 包裹节点，条件成员后写的覆盖先写的）。
+
+语义边界：
+
+- `uni dev -p desktop` / `uni build -p desktop` 即桌面构建；`dev:desktop` / `build:desktop` npm scripts 是它们的便捷封装（启动自检自动追加）。
+- 直接运行 `dev:h5` / `build:h5`（普通 `uni` 命令）是真正的浏览器构建：`DESKTOP` 未定义、`H5` 正常生效，插件不驱动任何桌面行为。
+- HBuilderX 用户：package.json 保存后，运行/发行菜单会自动出现「Desktop」。
+- manifest.json 视图一致：本项目提取应用名、窗口标题等配置时同样按 DESKTOP 平台求值（`@uni-helper/jsonu`），与编译期看到的内容一致：manifest 里的 `#ifdef DESKTOP` 值会被采用，`#ifdef H5` 值被剔除。
+- 运行时区分桌面壳与纯浏览器：检测 preload 注入的桥 `!!window.__UNI_DESKTOP_BRIDGE__`。
 
 ## 垫片支持的 API
 
@@ -209,17 +264,16 @@ createDesktopApp(__DESKTOP_CONFIG__)
 
 ## 包结构
 
-单包发布，所有能力通过子路径导出与 `bin` 提供：
+单包发布，所有能力通过子路径导出提供：
 
-| 导入 / 命令 | 说明 |
+| 导入 | 说明 |
 | --- | --- |
-| `@uni-helper/desktop` | `defineConfig`、`dev` / `build` / `pack` / `init` 编排 |
+| `@uni-helper/desktop` | `defineConfig` 与类型 |
 | `@uni-helper/desktop/shim` | 渲染端 uni API 垫片（在 `src/main.ts` 首行导入） |
 | `@uni-helper/desktop/shim/channels` | 垫片 IPC 通道契约，自定义主进程可复用 |
 | `@uni-helper/desktop/shim/apis` | 垫片 API 实现（`uniDesktop` 插件的模块替换层引用） |
-| `@uni-helper/desktop/vite` | `uniDesktop` vite 插件，在 `vite.config.ts` 中注册 |
+| `@uni-helper/desktop/vite` | `uniDesktop` vite 插件，在 `vite.config.ts` 中注册，驱动整个桌面平台 |
 | `@uni-helper/desktop/main` | 自定义主进程入口复用的 `createDesktopApp` |
-| `uni-desktop`（bin） | 命令行工具，对应上述 dev / build / pack / init |
 
 ## License
 

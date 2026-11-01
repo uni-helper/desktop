@@ -6,9 +6,23 @@
   "scripts": {
     "dev:h5": "uni",
     "build:h5": "uni build",
-    "desktop:dev": "uni-desktop dev",
-    "desktop:build": "uni-desktop build",
-    "desktop:pack": "uni-desktop pack"
+    "dev:desktop": "uni -p desktop",
+    "build:desktop": "uni build -p desktop"
+  },
+  "uni-app": {
+    "scripts": {
+      "desktop": {
+        "title": "桌面端",
+        "env": {
+          "UNI_PLATFORM": "h5"
+        },
+        "define": {
+          "DESKTOP": true,
+          "H5": false,
+          "WEB": false
+        }
+      }
+    }
   },
   "dependencies": {
     "@dcloudio/uni-app": "3.0.0-5030320261023001",

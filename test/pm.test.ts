@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { addCommand, detectPackageManager, runCommand } from '../src/orchestrate/pm'
+import { addCommand, detectPackageManager } from '../src/orchestrate/pm'
 
 const tempDirs: string[] = []
 
@@ -31,15 +31,6 @@ describe('detectPackageManager', () => {
     const child = join(parent, 'packages', 'app')
     await mkdir(child, { recursive: true })
     expect(detectPackageManager(child)).toBe('pnpm')
-  })
-})
-
-describe('runCommand', () => {
-  it('maps scripts to package manager commands', () => {
-    expect(runCommand('pnpm', 'dev:h5')).toEqual({ cmd: 'pnpm', args: ['run', 'dev:h5'] })
-    expect(runCommand('npm', 'dev:h5')).toEqual({ cmd: 'npm', args: ['run', 'dev:h5'] })
-    expect(runCommand('yarn', 'dev:h5')).toEqual({ cmd: 'yarn', args: ['dev:h5'] })
-    expect(runCommand('bun', 'dev:h5')).toEqual({ cmd: 'bun', args: ['run', 'dev:h5'] })
   })
 })
 

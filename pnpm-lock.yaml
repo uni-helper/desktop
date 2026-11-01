@@ -171,6 +171,9 @@ catalogs:
       specifier: ^1.7.2
       version: 1.7.2
   build:
+    '@clack/prompts':
+      specifier: ^1.8.1
+      version: 1.8.1
     '@uni-helper/jsonu':
       specifier: ^0.0.3
       version: 0.0.3
@@ -190,9 +193,6 @@ catalogs:
     bumpp:
       specifier: ^12.3.0
       version: 12.3.0
-    cac:
-      specifier: ^7.1.0
-      version: 7.1.0
     eslint:
       specifier: ^10.11.0
       version: 10.12.0
@@ -256,12 +256,12 @@ importers:
 
   .:
     dependencies:
+      '@clack/prompts':
+        specifier: catalog:build
+        version: 1.8.1
       '@uni-helper/jsonu':
         specifier: catalog:build
         version: 0.0.3
-      cac:
-        specifier: catalog:cli
-        version: 7.1.0
       consola:
         specifier: catalog:build
         version: 3.4.2

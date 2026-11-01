@@ -33,19 +33,6 @@ export function detectPackageManager(root: string): PackageManager {
   }
 }
 
-export function runCommand(pm: PackageManager, script: string): { cmd: string, args: string[] } {
-  switch (pm) {
-    case 'pnpm':
-      return { cmd: 'pnpm', args: ['run', script] }
-    case 'yarn':
-      return { cmd: 'yarn', args: [script] }
-    case 'bun':
-      return { cmd: 'bun', args: ['run', script] }
-    default:
-      return { cmd: 'npm', args: ['run', script] }
-  }
-}
-
 export function addCommand(pm: PackageManager, packages: string[], dev: boolean): { cmd: string, args: string[] } {
   switch (pm) {
     case 'pnpm':

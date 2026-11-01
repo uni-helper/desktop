@@ -18,13 +18,6 @@ export interface BakedDesktopConfig {
   updater: DesktopUpdaterConfig | false;
   icon?: string;
 }
-export interface BuildOptions {
-  cwd?: string;
-  pack?: boolean;
-}
-export interface BuildResult {
-  outDir: string;
-}
 export interface DesktopAppConfig {
   name?: string;
   appId?: string;
@@ -35,14 +28,10 @@ export interface DesktopAppConfig {
   homepage?: string;
   description?: string;
 }
-export interface DesktopBuildConfig {
-  command?: string;
-}
 export interface DesktopConfig {
   app?: DesktopAppConfig;
   window?: DesktopWindowConfig;
   dev?: DesktopDevConfig;
-  build?: DesktopBuildConfig;
   tray?: DesktopTrayConfig | false;
   updater?: DesktopUpdaterConfig | false;
   main?: DesktopMainConfig;
@@ -50,9 +39,6 @@ export interface DesktopConfig {
 }
 export interface DesktopDevConfig {
   url?: string;
-  command?: string;
-  waitTimeout?: number;
-  interval?: number;
   openDevtools?: boolean;
 }
 export interface DesktopMainConfig {
@@ -106,17 +92,6 @@ export interface DesktopWindowConfig {
   alwaysOnTop?: boolean;
   kiosk?: boolean;
 }
-export interface DevHandle {
-  close: () => Promise<void>;
-}
-export interface DevOptions {
-  cwd?: string;
-  url?: string;
-}
-export interface InitOptions {
-  cwd?: string;
-  install?: boolean;
-}
 export interface ManifestInfo {
   name?: string;
   appid?: string;
@@ -129,13 +104,6 @@ export interface ManifestInfo {
       base?: string;
     };
   };
-}
-export interface PackOptions {
-  cwd?: string;
-  args?: string[];
-}
-export interface PackResult {
-  output: string;
 }
 export interface ProjectInfo {
   author?: string;
@@ -155,13 +123,7 @@ export interface ResolvedConfig {
   window: ResolvedWindowConfig;
   dev: {
     url: string;
-    command: string;
-    waitTimeout: number;
-    interval: number;
     openDevtools: boolean;
-  };
-  build: {
-    command: string;
   };
   tray: {
     icon: string;
@@ -214,9 +176,5 @@ export declare class DesktopError extends Error {
 // #endregion
 
 // #region Functions
-export declare function build(_?: BuildOptions): Promise<BuildResult>;
 export declare function defineConfig(_: UnhConfig): UnhConfig;
-export declare function dev(_?: DevOptions): Promise<DevHandle>;
-export declare function init(_?: InitOptions): Promise<void>;
-export declare function pack(_?: PackOptions): Promise<PackResult>;
 // #endregion

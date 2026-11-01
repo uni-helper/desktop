@@ -8,6 +8,13 @@ const savedFilePath = ref('')
 const savedFiles = ref([])
 const platform = ref('')
 
+// Compile-time build target: `#ifdef DESKTOP` only applies when building
+// through uni-desktop, plain `uni` builds compile as h5.
+let buildTarget = 'h5'
+// #ifdef DESKTOP
+buildTarget = 'desktop'
+// #endif
+
 async function copyToClipboard() {
   await uni.setClipboardData({ data: 'Hello from uni-app desktop!' })
   message.value = 'Copied to clipboard.'
@@ -69,6 +76,19 @@ onMounted(() => {
     <text class="meta">
       Platform: {{ platform || '…' }}
     </text>
+    <text class="meta">
+      Build target: {{ buildTarget }}
+    </text>
+    <!-- #ifdef DESKTOP -->
+    <text class="meta desktop-note">
+      Running in the desktop shell.
+    </text>
+    <!-- #endif -->
+    <!-- #ifdef H5 -->
+    <text class="meta">
+      Running in a web browser.
+    </text>
+    <!-- #endif -->
 
     <button class="action" @click="copyToClipboard">
       Copy to clipboard
@@ -125,6 +145,12 @@ onMounted(() => {
   color: #6b7280;
   font-size: 24rpx;
 }
+
+/* #ifdef DESKTOP */
+.desktop-note {
+  color: #2563eb;
+}
+/* #endif */
 
 .meta.small {
   word-break: break-all;

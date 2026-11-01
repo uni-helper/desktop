@@ -46,20 +46,20 @@ describe('resolveDesktopConfig', () => {
     expect(resolved.window.title).toBe('My App')
     expect(resolved.window.width).toBe(420)
     expect(resolved.dev.url).toBe('http://localhost:5173')
-    expect(resolved.build.command).toBe('build:h5')
     expect(resolved.pack.autoPack).toBe(true)
   })
 
-  it('reads conditional compilation for the H5 platform', async () => {
+  it('reads conditional compilation for the DESKTOP platform', async () => {
     const root = await createProject({
       'src/manifest.json': `{
   "name": "common-name",
-  // #ifdef MP-WEIXIN
-  "name": "wx-name",
+  // #ifdef H5
+  "name": "web-name",
   // #endif
   "h5": {
     "router": { "mode": "hash", "base": "./" },
-    // #ifdef H5
+    "title": "Common Title",
+    // #ifdef DESKTOP
     "title": "Desktop Title"
     // #endif
   }

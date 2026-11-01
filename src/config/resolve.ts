@@ -1,6 +1,7 @@
 import type { BakedDesktopConfig } from '../baked'
 import type { ManifestInfo } from '../shared/manifest'
 import type { DesktopConfig, DesktopTrayMenuItem, DesktopUpdaterConfig, DesktopWindowConfig, ResolvedWindowConfig, UnhConfig } from '../types'
+
 import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
@@ -40,13 +41,7 @@ export interface ResolvedConfig {
   window: ResolvedWindowConfig
   dev: {
     url: string
-    command: string
-    waitTimeout: number
-    interval: number
     openDevtools: boolean
-  }
-  build: {
-    command: string
   }
   tray: {
     /** Absolute tray icon path; defaults to the app icon */
@@ -161,13 +156,7 @@ export function normalizeConfig(
     window,
     dev: {
       url: config.dev?.url ?? 'http://localhost:5173',
-      command: config.dev?.command ?? 'dev:h5',
-      waitTimeout: config.dev?.waitTimeout ?? 60_000,
-      interval: config.dev?.interval ?? 500,
       openDevtools: config.dev?.openDevtools ?? false,
-    },
-    build: {
-      command: config.build?.command ?? 'build:h5',
     },
     tray,
     updater: config.updater ?? false,

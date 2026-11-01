@@ -54,21 +54,14 @@ export type ResolvedWindowConfig = Required<Omit<DesktopWindowConfig, 'titleBarS
 }
 
 export interface DesktopDevConfig {
-  /** URL of the H5 dev server the Electron window loads, defaults to `http://localhost:5173` */
+  /**
+   * URL the Electron window loads in dev. By default the address the uni dev
+   * server actually bound to is used; set this when the shell must load
+   * something else (a proxy, an https domain).
+   */
   url?: string
-  /** npm script that starts the H5 dev server, defaults to `dev:h5` */
-  command?: string
-  /** Milliseconds to wait for the dev server before failing, defaults to 60000 */
-  waitTimeout?: number
-  /** Milliseconds between reachability probes, defaults to 500 */
-  interval?: number
   /** Open detached DevTools in the desktop window */
   openDevtools?: boolean
-}
-
-export interface DesktopBuildConfig {
-  /** npm script that builds the H5 bundle, defaults to `build:h5` */
-  command?: string
 }
 
 export interface DesktopTrayMenuItem {
@@ -126,7 +119,6 @@ export interface DesktopConfig {
   app?: DesktopAppConfig
   window?: DesktopWindowConfig
   dev?: DesktopDevConfig
-  build?: DesktopBuildConfig
   tray?: DesktopTrayConfig | false
   updater?: DesktopUpdaterConfig | false
   main?: DesktopMainConfig

@@ -8,9 +8,5 @@ export class DesktopError extends Error {
 // #endregion
 
 // #region Functions
-export async function build(_) {}
 export function defineConfig(_) {}
-export async function dev(_) {}
-export async function init(_) {}
-export async function pack(_) {}
 // #endregion
