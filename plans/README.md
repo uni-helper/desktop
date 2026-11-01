@@ -14,27 +14,27 @@ fixes that); no packaged app was ever booted as part of the audit.
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
-| 001 | 001-fix-packaged-updater — bundle electron-updater so packaged auto-update works | P1 | M | — | TODO |
-| 002 | 002-runtime-execution-tests — characterize the main-process security boundary | P1 | M | — | TODO |
-| 003 | 003-harden-navigation — origin checks + openExternal scheme allowlist | P1 | S | 002 | TODO |
-| 004 | 004-runtime-disconnect-guard — custom mains stop orphaning the dev shell | P1 | S | 002 | TODO |
-| 005 | 005-savefile-preserve-filename — docx/xlsx survive saveFile→openDocument | P1 | S | 002 | TODO |
-| 006 | 006-raise-electron-peer-floor — honest `>=25` + node18 esbuild target | P1 | S | — | TODO |
-| 007 | 007-ci-example-build — CI runs the real uni pipeline via quick-start | P2 | M | — | TODO |
-| 008 | 008-ci-knip — the fourth gate blocks in CI | P2 | S | — | TODO |
-| 009 | 009-layout-contract — assembled-app layout single-sourced | P2 | S | — | TODO |
-| 010 | 010-baked-config-trim — drop runtime-unread fields from the public baked type | P2 | S | — | TODO |
-| 011 | 011-serialize-restart — no double-spawn, no respawn after close | P2 | S | — | TODO |
-| 012 | 012-windows-shell-quoting — space paths survive spawnAwait on win32 | P2 | S | — | TODO (Windows smoke test pending maintainer) |
-| 013 | 013-precommit-hooks — fast pre-commit, full gate on pre-push, no pnpx | P2 | S | — | TODO |
-| 014 | 014-atomic-user-file-writes — temp+rename for package.json/manifest.json | P3 | S | — | TODO |
-| 015 | 015-savefile-payload-limits — size + count caps on the saveFile IPC | P3 | S | 002, 005 | TODO |
-| 016 | 016-pack-win-mac-passthrough — signing/notarization options reachable | P2 | S | — | TODO |
-| 017 | 017-window-controls-bridge — frameless windows get minimize/maximize/close | P2 | S–M | 002 | TODO |
-| 018 | 018-updater-events-to-renderer — uni.getUpdateManager over electron-updater | P3 | M | 001, 002, 017 (pattern) | TODO |
-| 019 | 019-tray-actions-close-to-tray — tray menu actions + close-to-tray | P3 | M | 002 | TODO |
-| 020 | 020-self-check-desktop-uni-script — the blocking wiring gets auto-created | P3 | S | 014 (soft, atomic write pattern) | TODO |
-| 021 | 021-filesystem-manager-spike — design doc + readFile/writeFile prototype | P3 | L (spike) | 002, 015 | TODO |
+| 001 | 001-fix-packaged-updater — bundle electron-updater so packaged auto-update works | P1 | M | — | DONE |
+| 002 | 002-runtime-execution-tests — characterize the main-process security boundary | P1 | M | — | DONE (18 tests; `__dirname` pins anchor on the vite-node module dir) |
+| 003 | 003-harden-navigation — origin checks + openExternal scheme allowlist | P1 | S | 002 | DONE (openExternal swallows unparseable urls) |
+| 004 | 004-runtime-disconnect-guard — custom mains stop orphaning the dev shell | P1 | S | 002 | DONE |
+| 005 | 005-savefile-preserve-filename — docx/xlsx survive saveFile→openDocument | P1 | S | 002 | DONE |
+| 006 | 006-raise-electron-peer-floor — honest `>=25` + node18 esbuild target | P1 | S | — | DONE |
+| 007 | 007-ci-example-build — CI runs the real uni pipeline via quick-start | P2 | M | — | DONE (local dry run printed artifacts; first CI run validates YAML) |
+| 008 | 008-ci-knip — the fourth gate blocks in CI | P2 | S | — | DONE |
+| 009 | 009-layout-contract — assembled-app layout single-sourced | P2 | S | — | DONE (also folded the 003 webDir literal) |
+| 010 | 010-baked-config-trim — drop runtime-unread fields from the public baked type | P2 | S | — | DONE |
+| 011 | 011-serialize-restart — no double-spawn, no respawn after close | P2 | S | — | DONE (drain-loop chain collapses a sync burst, as its own test requires) |
+| 012 | 012-windows-shell-quoting — space paths survive spawnAwait on win32 | P2 | S | — | DONE; Windows 真机 smoke test 待维护者执行一次 `uni build -p desktop`（路径含空格环境） |
+| 013 | 013-precommit-hooks — fast pre-commit, full gate on pre-push, no pnpx | P2 | S | — | DONE |
+| 014 | 014-atomic-user-file-writes — temp+rename for package.json/manifest.json | P3 | S | — | DONE |
+| 015 | 015-savefile-payload-limits — size + count caps on the saveFile IPC | P3 | S | 002, 005 | DONE (count-cap test loops 2000 files, ~1 s) |
+| 016 | 016-pack-win-mac-passthrough — signing/notarization options reachable | P2 | S | — | DONE |
+| 017 | 017-window-controls-bridge — frameless windows get minimize/maximize/close | P2 | S–M | 002 | DONE |
+| 018 | 018-updater-events-to-renderer — uni.getUpdateManager over electron-updater | P3 | M | 001, 002, 017 (pattern) | DONE (event names verified against the installed electron-updater .d.ts) |
+| 019 | 019-tray-actions-close-to-tray — tray menu actions + close-to-tray | P3 | M | 002 | DONE |
+| 020 | 020-self-check-desktop-uni-script — the blocking wiring gets auto-created | P3 | S | 014 (soft, atomic write pattern) | DONE (sync atomic twin; `desktopScriptSnippet` removed as unused) |
+| 021 | 021-filesystem-manager-spike — design doc + readFile/writeFile prototype | P3 | L (spike) | 002, 015 | DONE (docs/design/fs-manager.md; writeFile is overwrite-only in the prototype) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
