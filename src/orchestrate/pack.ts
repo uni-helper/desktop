@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path'
 import process from 'node:process'
 import { DesktopError } from '../error'
 import { logger } from '../log'
-import { APP_RESOURCES_DIR, appIconFileName } from '../shared/paths'
+import { APP_ELECTRON_DIR, APP_RESOURCES_DIR, APP_WEB_DIR, appIconFileName } from '../shared/paths'
 import { detectPackageManager, spawnAwait } from './pm'
 
 /** Read the installed electron version; electron-builder needs an exact one. */
@@ -61,7 +61,7 @@ export function createElectronBuilderConfig(
       output: join(root, resolved.pack.output),
       buildResources: APP_RESOURCES_DIR,
     },
-    files: ['electron/**/*', 'web/**/*', 'resources/**/*', 'package.json'],
+    files: [`${APP_ELECTRON_DIR}/**/*`, `${APP_WEB_DIR}/**/*`, `${APP_RESOURCES_DIR}/**/*`, 'package.json'],
     asar: resolved.pack.asar,
     win: {
       target: resolved.pack.targets.win ?? ['nsis'],

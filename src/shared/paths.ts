@@ -11,6 +11,28 @@ export const DEV_APP_DIR = 'dist/dev/desktop'
 /** Directory (relative to the app dir) holding assets referenced by the baked config. */
 export const APP_RESOURCES_DIR = 'resources'
 
+/**
+ * The assembled app layout contract, shared by the build side (driver, pack,
+ * bundle) and the runtime side (createDesktopApp). Renaming any of these means
+ * editing every consumer in the same commit: `test/driver.test.ts` and
+ * `test/bundle.test.ts` pin the literals and will catch a miss.
+ *
+ * appDir/
+ *   package.json        ← written by `assembleDesktopApp` (main: electron/main.cjs)
+ *   electron/main.cjs   ← esbuild bundle of the main-process entry
+ *   electron/preload.cjs ← esbuild bundle of the preload template
+ *   web/                ← the uni h5 build output, moved in wholesale
+ *   resources/          ← icons referenced by the baked config
+ */
+/** Directory (relative to the app dir) holding the bundled main/preload scripts. */
+export const APP_ELECTRON_DIR = 'electron'
+/** Directory (relative to the app dir) holding the uni web build. */
+export const APP_WEB_DIR = 'web'
+/** File name of the bundled main-process script inside `APP_ELECTRON_DIR`. */
+export const MAIN_BUNDLE_FILE = 'main.cjs'
+/** File name of the bundled preload script inside `APP_ELECTRON_DIR`. */
+export const PRELOAD_BUNDLE_FILE = 'preload.cjs'
+
 /** File name of the built-in uni-helper icon inside the package `assets` directory. */
 const DEFAULT_ICON_FILE = 'icon.png'
 

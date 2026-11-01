@@ -13,7 +13,7 @@ import { bundleEntry, bundlePreload } from '../orchestrate/bundle'
 import { killTree, resolveElectronBinary } from '../orchestrate/electron'
 import { packInternal } from '../orchestrate/pack'
 import { copyAssets } from '../shared/assets'
-import { BUILD_APP_DIR, DEV_APP_DIR } from '../shared/paths'
+import { APP_ELECTRON_DIR, APP_RESOURCES_DIR, APP_WEB_DIR, BUILD_APP_DIR, DEV_APP_DIR, MAIN_BUNDLE_FILE } from '../shared/paths'
 import { getTemplateDir, resolveMainEntry } from '../shared/templates'
 
 export interface DesktopDevRuntimeHandle {
@@ -46,14 +46,14 @@ export function isDesktopBuild(): boolean {
 export async function startDesktopDevRuntime(resolved: ResolvedConfig, url: string): Promise<DesktopDevRuntimeHandle> {
   const root = resolved.root
   const outDir = join(root, DEV_APP_DIR)
-  const electronDir = join(outDir, 'electron')
+  const electronDir = join(outDir, APP_ELECTRON_DIR)
   const templateDir = getTemplateDir()
 
   // Fresh runtime parts each start, laid out like the built app (electron/
   // next to resources/); the macOS shell cache in `electron-cache` survives so
   // a dev restart does not pay for another bundle clone.
   await rm(electronDir, { recursive: true, force: true })
-  await rm(join(outDir, 'resources'), { recursive: true, force: true })
+  await rm(join(outDir, APP_RESOURCES_DIR), { recursive: true, force: true })
   const baked = bakeConfig(resolved, await copyAssets(resolved, outDir))
 
   const electronBinary = resolveElectronBinary(root)
@@ -73,7 +73,7 @@ export async function startDesktopDevRuntime(resolved: ResolvedConfig, url: stri
   let electronProcess: ChildProcess | undefined
   let electronStarted = false
   const spawnElectron = (): void => {
-    electronProcess = spawn(launchBinary, [join(electronDir, 'main.cjs')], {
+    electronProcess = spawn(launchBinary, [join(electronDir, MAIN_BUNDLE_FILE)], {
       cwd: root,
       env: { ...process.env, DESKTOP_DEV_URL: url },
       // The fourth channel carries IPC: the shell watches for it to close and
@@ -127,7 +127,7 @@ export async function assembleDesktopApp(resolved: ResolvedConfig, webDir: strin
   const root = resolved.root
   const outDir = join(root, BUILD_APP_DIR)
   const templateDir = getTemplateDir()
-  const webTarget = join(outDir, 'web')
+  const webTarget = join(outDir, APP_WEB_DIR)
 
   if (!existsSync(join(webDir, 'index.html')))
     throw new DesktopError(`H5 build output not found at ${webDir}. Make sure the build runs \`uni build -p desktop\`.`)
@@ -143,7 +143,7 @@ export async function assembleDesktopApp(resolved: ResolvedConfig, webDir: strin
   const assets = await copyAssets(resolved, outDir)
   const baked = bakeConfig(resolved, assets)
 
-  const electronDir = join(outDir, 'electron')
+  const electronDir = join(outDir, APP_ELECTRON_DIR)
   await bundleEntry({
     entryPath: resolveMainEntry(root, resolved.mainEntry),
     outDir: electronDir,
@@ -156,7 +156,8 @@ export async function assembleDesktopApp(resolved: ResolvedConfig, webDir: strin
     productName: resolved.appName,
     version: resolved.version,
     private: true,
-    main: 'electron/main.cjs',
+    // Package.json `main` is parsed by electron on every platform: always forward slashes.
+    main: `${APP_ELECTRON_DIR}/${MAIN_BUNDLE_FILE}`,
     description: resolved.description,
     author: resolved.author,
     homepage: resolved.homepage,

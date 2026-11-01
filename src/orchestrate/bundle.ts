@@ -3,6 +3,7 @@ import type { BakedDesktopConfig } from '../baked'
 import { join } from 'node:path'
 import { build, context } from 'esbuild'
 import { logger } from '../log'
+import { MAIN_BUNDLE_FILE, PRELOAD_BUNDLE_FILE } from '../shared/paths'
 
 // `electron` must stay a runtime require; electron-updater is bundled so the
 // packaged app (which ships no node_modules) can still auto-update.
@@ -59,7 +60,7 @@ export async function bundleEntry(options: BundleEntryOptions): Promise<BuildCon
     platform: 'node' as const,
     format: 'cjs' as const,
     target: 'node18',
-    outfile: join(options.outDir, 'main.cjs'),
+    outfile: join(options.outDir, MAIN_BUNDLE_FILE),
     external: ELECTRON_EXTERNALS,
     alias: options.alias,
     resolveExtensions: ['.tsx', '.ts', '.jsx', '.js', '.mjs', '.cjs', '.json', '.css'],
@@ -85,7 +86,7 @@ export async function bundlePreload(options: BundlePreloadOptions): Promise<void
     platform: 'node',
     format: 'cjs',
     target: 'node18',
-    outfile: join(options.outDir, 'preload.cjs'),
+    outfile: join(options.outDir, PRELOAD_BUNDLE_FILE),
     external: ['electron'],
     alias: options.alias,
     logLevel: 'silent',

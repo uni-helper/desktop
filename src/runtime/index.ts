@@ -7,6 +7,7 @@ import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { createConsola } from 'consola/basic'
 import { app, BrowserWindow, ipcMain, Menu, protocol, shell, Tray } from 'electron'
+import { APP_RESOURCES_DIR, APP_WEB_DIR, PRELOAD_BUNDLE_FILE } from '../shared/paths'
 import { DESKTOP_FILE_SCHEME, EXTENSION_BY_MIME, mimeFromExtension, parseDesktopFileUrl, toDesktopFileUrl } from '../shared/protocol'
 import { shimChannels } from '../shim/channels'
 
@@ -40,7 +41,7 @@ function savedRoot(): string {
  * electron-builder moves the same files into `resources/`.
  */
 function assetsRoot(): string {
-  return join(__dirname, '..', 'resources')
+  return join(__dirname, '..', APP_RESOURCES_DIR)
 }
 
 /**
@@ -195,7 +196,7 @@ function hardenNavigation(window: BrowserWindow, devUrl: string | undefined): vo
   }
   // The packaged app's own pages, inside the asar; every other file:// url is
   // renderer-controlled content and must not load in this window.
-  const webDir = join(__dirname, '..', 'web')
+  const webDir = join(__dirname, '..', APP_WEB_DIR)
 
   const openExternal = (url: string): void => {
     let parsed: URL
@@ -270,7 +271,7 @@ function createMainWindow(baked: BakedDesktopConfig): BrowserWindow {
     kiosk: window.kiosk,
     icon: assetPath(baked.icon),
     webPreferences: {
-      preload: join(__dirname, 'preload.cjs'),
+      preload: join(__dirname, PRELOAD_BUNDLE_FILE),
       contextIsolation: true,
       nodeIntegration: false,
     },
@@ -281,7 +282,7 @@ function createMainWindow(baked: BakedDesktopConfig): BrowserWindow {
   if (devUrl)
     void mainWindow.loadURL(devUrl)
   else
-    void mainWindow.loadFile(join(__dirname, '../web/index.html'))
+    void mainWindow.loadFile(join(__dirname, '..', APP_WEB_DIR, 'index.html'))
 
   if (baked.dev.openDevtools)
     mainWindow.webContents.openDevTools({ mode: 'detach' })
