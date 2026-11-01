@@ -1,5 +1,6 @@
 import type { MenuItemConstructorOptions } from 'electron'
 import type { BakedDesktopConfig } from '../baked'
+import type { DesktopTrayMenuAction } from '../types'
 import { randomUUID } from 'node:crypto'
 import { mkdir, readdir, readFile, realpath, stat, unlink, writeFile } from 'node:fs/promises'
 import { extname, join, sep } from 'node:path'
@@ -26,6 +27,9 @@ const logger = createConsola({
 })
 
 let mainWindow: BrowserWindow | null = null
+
+/** Set by `before-quit` so close-to-tray can tell real quits from window closes. */
+let quitting = false
 
 function getMainWindow(): BrowserWindow | null {
   return mainWindow
@@ -338,6 +342,16 @@ function createMainWindow(baked: BakedDesktopConfig): BrowserWindow {
 
   hardenNavigation(mainWindow, devUrl)
 
+  if (window.closeToTray) {
+    mainWindow.on('close', (event) => {
+      // Hide instead of quitting; a real quit (tray quit, Cmd+Q) sets `quitting` first.
+      if (!quitting) {
+        event.preventDefault()
+        mainWindow?.hide()
+      }
+    })
+  }
+
   if (devUrl)
     void mainWindow.loadURL(devUrl)
   else
@@ -361,17 +375,46 @@ function setupTray(baked: BakedDesktopConfig): void {
     const tray = new Tray(iconPath)
     if (trayConfig?.tooltip)
       tray.setToolTip(trayConfig.tooltip)
-    const template: MenuItemConstructorOptions[] = (trayConfig?.menu ?? [{ role: 'quit' }]).map(item => ({
-      label: item.label,
-      role: item.role as MenuItemConstructorOptions['role'],
-      enabled: item.enabled,
-      visible: item.visible,
-    }))
+    const template: MenuItemConstructorOptions[] = (trayConfig?.menu ?? [{ role: 'quit' }]).map((item) => {
+      if (item.action) {
+        return {
+          label: item.label,
+          enabled: item.enabled,
+          visible: item.visible,
+          click: () => runTrayAction(item.action!),
+        }
+      }
+      return {
+        label: item.label,
+        role: item.role as MenuItemConstructorOptions['role'],
+        enabled: item.enabled,
+        visible: item.visible,
+      }
+    })
     tray.setContextMenu(Menu.buildFromTemplate(template))
     tray.on('click', () => getMainWindow()?.show())
   }
   catch (error) {
     logger.error('failed to create tray:', error)
+  }
+}
+
+function runTrayAction(action: DesktopTrayMenuAction): void {
+  if (action === 'show') {
+    const window = getMainWindow()
+    if (window) {
+      window.show()
+      window.focus()
+    }
+  }
+  else if (action === 'quit') {
+    app.quit()
+  }
+  else if (action === 'check-for-updates') {
+    // best-effort: without updater config this is a no-op the user can diagnose
+    void import('electron-updater')
+      .then(({ autoUpdater }) => autoUpdater.checkForUpdates())
+      .catch((error: unknown) => logger.warn('check for updates failed:', error instanceof Error ? error.message : error))
   }
 }
 
@@ -429,6 +472,10 @@ export function createDesktopApp(baked: BakedDesktopConfig): void {
     app.quit()
     return
   }
+
+  app.on('before-quit', () => {
+    quitting = true
+  })
 
   app.on('second-instance', () => {
     const window = getMainWindow()

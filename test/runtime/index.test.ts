@@ -14,7 +14,15 @@ const state = vi.hoisted(() => ({
   quit: vi.fn(),
   requestSingleInstanceLock: vi.fn(() => true),
   registerSchemes: vi.fn(),
+  trayInstances: [] as any[],
+  trayMenus: [] as any[],
+  appListeners: new Map<string, ((...args: any[]) => void)[]>(),
 }))
+
+function emitAppEvent(event: string, ...args: any[]): void {
+  for (const listener of state.appListeners.get(event) ?? [])
+    listener(...args)
+}
 
 let userDataPath = ''
 const tempDirs: string[] = []
@@ -53,7 +61,11 @@ vi.mock('electron', async () => {
       setName: vi.fn(),
       requestSingleInstanceLock: state.requestSingleInstanceLock,
       whenReady: vi.fn(() => Promise.resolve()),
-      on: vi.fn(),
+      on: (event: string, listener: (...args: any[]) => void) => {
+        const listeners = state.appListeners.get(event) ?? []
+        listeners.push(listener)
+        state.appListeners.set(event, listeners)
+      },
       quit: state.quit,
     },
     BrowserWindow: FakeBrowserWindow,
@@ -66,8 +78,20 @@ vi.mock('electron', async () => {
       openExternal: vi.fn(async (url: string) => { state.openExternalUrls.push(url) }),
       openPath: vi.fn(async () => ''),
     },
-    Menu: { buildFromTemplate: vi.fn((t: any) => t) },
-    Tray: class { setContextMenu = vi.fn(); setToolTip = vi.fn(); on = vi.fn() },
+    Menu: {
+      buildFromTemplate: vi.fn((t: any) => {
+        state.trayMenus.push(t)
+        return t
+      }),
+    },
+    Tray: class {
+      setContextMenu = vi.fn()
+      setToolTip = vi.fn()
+      on = vi.fn()
+      constructor() {
+        state.trayInstances.push(this)
+      }
+    },
   }
 })
 
@@ -85,6 +109,9 @@ beforeEach(async () => {
   state.openExternalUrls = []
   state.quit.mockClear()
   state.registerSchemes.mockClear()
+  state.trayInstances.length = 0
+  state.trayMenus.length = 0
+  state.appListeners.clear()
   state.requestSingleInstanceLock.mockReturnValue(true)
   userDataPath = await mkdtemp(join(tmpdir(), 'uni-desktop-runtime-'))
   tempDirs.push(userDataPath)
@@ -489,5 +516,82 @@ describe('app lifecycle', () => {
     const handler = state.ipcHandlers.get('desktop:uni:applyUpdate')!
 
     await expect(handler({}, undefined)).rejects.toThrow('no downloaded update')
+  })
+})
+
+describe('tray actions', () => {
+  async function bootWithTray(): Promise<any[]> {
+    runtime.createDesktopApp({
+      ...bakedFixture(),
+      tray: {
+        icon: 'tray-icon.png',
+        menu: [
+          { label: 'Show', action: 'show' },
+          { label: 'Quit', action: 'quit' },
+          { role: 'quit' },
+        ],
+      },
+    })
+    await vi.waitFor(() => expect(state.trayInstances).toHaveLength(1))
+    return state.trayMenus.at(-1) ?? []
+  }
+
+  it('tray menu actions dispatch', async () => {
+    const template = await bootWithTray()
+
+    expect(template[0]).toMatchObject({ label: 'Show' })
+    template[0].click()
+    expect(state.window.show).toHaveBeenCalled()
+    expect(state.window.focus).toHaveBeenCalled()
+
+    template[1].click()
+    expect(state.quit).toHaveBeenCalled()
+
+    // A role item keeps Electron's built-in behavior: no click handler.
+    expect(template[2]).toMatchObject({ role: 'quit' })
+    expect(template[2].click).toBeUndefined()
+  })
+
+  it('check-for-updates warns instead of throwing without electron-updater availability', async () => {
+    runtime.createDesktopApp({
+      ...bakedFixture(),
+      tray: { icon: 'tray-icon.png', menu: [{ label: 'Update', action: 'check-for-updates' }] },
+    })
+    await vi.waitFor(() => expect(state.trayInstances).toHaveLength(1))
+
+    // The action is fire-and-forget: it must not reject into the menu click.
+    expect(() => state.trayMenus.at(-1)![0].click()).not.toThrow()
+  })
+})
+
+describe('close to tray', () => {
+  function closeEvent() {
+    return { preventDefault: vi.fn() }
+  }
+
+  it('closeToTray hides instead of closing until a real quit', async () => {
+    runtime.createDesktopApp({
+      ...bakedFixture(),
+      window: { ...bakedFixture().window, closeToTray: true },
+    })
+    await vi.waitFor(() => expect(state.windowOptions).toBeDefined())
+
+    let event = closeEvent()
+    state.window.emit('close', event)
+    expect(event.preventDefault).toHaveBeenCalled()
+    expect(state.window.hide).toHaveBeenCalled()
+
+    emitAppEvent('before-quit')
+    event = closeEvent()
+    state.window.emit('close', event)
+    expect(event.preventDefault).not.toHaveBeenCalled()
+  })
+
+  it('closeToTray absent keeps default close', async () => {
+    await boot()
+
+    const event = closeEvent()
+    state.window.emit('close', event)
+    expect(event.preventDefault).not.toHaveBeenCalled()
   })
 })

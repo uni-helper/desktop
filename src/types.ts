@@ -39,18 +39,21 @@ export interface DesktopWindowConfig {
   show?: boolean
   alwaysOnTop?: boolean
   kiosk?: boolean
+  /** Hide to the tray instead of quitting when the window is closed (non-mac quit behavior) */
+  closeToTray?: boolean
 }
 
 /**
  * Window options with every optional field resolved. `BakedDesktopConfig` is
  * derived from this type, so adding a window option only touches this file.
  */
-export type ResolvedWindowConfig = Required<Omit<DesktopWindowConfig, 'titleBarStyle' | 'minWidth' | 'minHeight' | 'backgroundColor'>> & {
+export type ResolvedWindowConfig = Required<Omit<DesktopWindowConfig, 'titleBarStyle' | 'minWidth' | 'minHeight' | 'backgroundColor' | 'closeToTray'>> & {
   title: string
   minWidth?: number
   minHeight?: number
   titleBarStyle?: 'default' | 'hidden' | 'hiddenInset'
   backgroundColor?: string
+  closeToTray?: boolean
 }
 
 export interface DesktopDevConfig {
@@ -64,11 +67,16 @@ export interface DesktopDevConfig {
   openDevtools?: boolean
 }
 
+/** Built-in actions a tray menu item can trigger (JSON-safe for the baked config). */
+export type DesktopTrayMenuAction = 'show' | 'quit' | 'check-for-updates'
+
 export interface DesktopTrayMenuItem {
   label?: string
   role?: string
   enabled?: boolean
   visible?: boolean
+  /** Triggers the built-in action when clicked; mutually exclusive with `role` */
+  action?: DesktopTrayMenuAction
 }
 
 export interface DesktopTrayConfig {

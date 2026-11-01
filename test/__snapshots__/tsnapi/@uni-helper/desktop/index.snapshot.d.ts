@@ -71,6 +71,7 @@ export interface DesktopTrayMenuItem {
   role?: string;
   enabled?: boolean;
   visible?: boolean;
+  action?: DesktopTrayMenuAction;
 }
 export interface DesktopUpdaterConfig {
   provider?: 'generic' | 'github' | 'gitlab' | 's3' | 'spaces';
@@ -94,6 +95,7 @@ export interface DesktopWindowConfig {
   show?: boolean;
   alwaysOnTop?: boolean;
   kiosk?: boolean;
+  closeToTray?: boolean;
 }
 export interface ManifestInfo {
   name?: string;
@@ -164,12 +166,13 @@ export interface UnhConfig {
 // #endregion
 
 // #region Types
-export type ResolvedWindowConfig = Required<Omit<DesktopWindowConfig, 'titleBarStyle' | 'minWidth' | 'minHeight' | 'backgroundColor'>> & {
+export type ResolvedWindowConfig = Required<Omit<DesktopWindowConfig, 'titleBarStyle' | 'minWidth' | 'minHeight' | 'backgroundColor' | 'closeToTray'>> & {
   title: string;
   minWidth?: number;
   minHeight?: number;
   titleBarStyle?: 'default' | 'hidden' | 'hiddenInset';
   backgroundColor?: string;
+  closeToTray?: boolean;
 };
 // #endregion
 

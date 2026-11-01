@@ -115,6 +115,7 @@ export default defineConfig({
       titleBarStyle: 'default',
       autoHideMenuBar: true,
       backgroundColor: '#ffffff',
+      closeToTray: false, // 关闭窗口时隐藏到托盘而非退出（macOS 的 Cmd+Q 与托盘退出仍会真正退出）
     },
     dev: {
       // 缺省时加载 uni dev server 实际监听的地址；仅在壳需要加载别的地址时设置
@@ -124,7 +125,7 @@ export default defineConfig({
     tray: { // 设为 false 关闭托盘
       icon: 'static/tray.png', // 省略时回退到 app.icon
       tooltip: 'My App',
-      menu: [{ role: 'quit' }],
+      menu: [{ label: '打开窗口', action: 'show' }, { role: 'quit' }],
     },
     updater: { // 设为 false 关闭自动更新
       provider: 'generic',
@@ -157,7 +158,7 @@ export default defineConfig({
 
 `manifest.json` 由 [@uni-helper/jsonu](https://github.com/uni-helper/jsonu) 解析，支持 uni-app 的 `#ifdef` 条件编译注释，按 DESKTOP 平台求值（与编译期视图一致，见[条件编译](#条件编译)）。启动自检补全 `h5.router` 时会保留条件编译块（重写文件时普通注释会被移除，仅条件编译注释往返保留）。
 
-所有字段都是可选的，未配置的值按 `defaults < manifest.json < unh.config.ts 的 desktop` 合并。
+所有字段都是可选的，未配置的值按 `defaults < manifest.json < unh.config.ts 的 desktop` 合并。托盘菜单项可用 `action: 'show' | 'quit' | 'check-for-updates'` 触发内置行为（与 `role` 互斥）；`window.closeToTray: true` 时关闭窗口会隐藏到托盘而非退出（macOS 上 Cmd+Q 与托盘退出仍会真正退出）。
 
 > 要求：manifest.json 的 `h5.router.mode` 必须是 `hash`、`h5.router.base` 必须是 `./`，否则 file:// 加载会白屏。启动自检会自动设置并校验告警。
 
