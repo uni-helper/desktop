@@ -9,7 +9,7 @@ import { createConsola } from 'consola/basic'
 import { app, BrowserWindow, ipcMain, Menu, protocol, shell, Tray } from 'electron'
 import { APP_RESOURCES_DIR, APP_WEB_DIR, PRELOAD_BUNDLE_FILE } from '../shared/paths'
 import { DESKTOP_FILE_SCHEME, EXTENSION_BY_MIME, mimeFromExtension, parseDesktopFileUrl, toDesktopFileUrl } from '../shared/protocol'
-import { shimChannels, windowChannels } from '../shim/channels'
+import { shimChannels, updaterChannels, updaterEventChannel, windowChannels } from '../shim/channels'
 
 export type { BakedDesktopConfig } from '../baked'
 export { DESKTOP_FILE_SCHEME, parseDesktopFileUrl, toDesktopFileUrl }
@@ -133,6 +133,21 @@ async function serveDesktopFileRequest(request: Request): Promise<Response> {
   }
 }
 
+/** State pushed to the renderer while the updater runs; uni-shaped by contract. */
+type UpdaterEvent
+  = | { type: 'checkForUpdate' }
+    | { type: 'updateAvailable' }
+    | { type: 'updateNotAvailable' }
+    | { type: 'updateReady', version?: string }
+    | { type: 'updateFailed', message: string }
+
+let lastUpdaterEvent: UpdaterEvent | undefined
+
+function sendUpdaterEvent(event: UpdaterEvent): void {
+  lastUpdaterEvent = event
+  getMainWindow()?.webContents.send(updaterEventChannel, event)
+}
+
 function registerIpcHandlers(): void {
   // The renderer sends bytes because uni-h5 hands out `blob:` temp paths,
   // which the main process cannot resolve on its own. `bytes` is an ArrayBuffer
@@ -207,6 +222,18 @@ function registerIpcHandlers(): void {
   })
   ipcMain.handle(windowChannels.close, () => {
     getMainWindow()?.close()
+  })
+
+  // Late subscribers pull the last updater event; without an updater it stays
+  // null and `applyUpdate` fails like a uni API instead of quitting blindly.
+  ipcMain.handle(shimChannels.getUpdateManager, async () => {
+    return { event: lastUpdaterEvent ?? null }
+  })
+  ipcMain.handle(updaterChannels.applyUpdate, async () => {
+    if (lastUpdaterEvent?.type !== 'updateReady')
+      throw new Error('no downloaded update')
+    const { autoUpdater } = await import('electron-updater')
+    autoUpdater.quitAndInstall()
   })
 }
 
@@ -358,8 +385,15 @@ async function setupUpdater(baked: BakedDesktopConfig): Promise<void> {
       autoUpdater.autoDownload = updater.autoDownload
     if (updater.autoInstallOnAppQuit !== undefined)
       autoUpdater.autoInstallOnAppQuit = updater.autoInstallOnAppQuit
+    autoUpdater.on('checking-for-update', () => sendUpdaterEvent({ type: 'checkForUpdate' }))
+    autoUpdater.on('update-available', () => sendUpdaterEvent({ type: 'updateAvailable' }))
+    autoUpdater.on('update-not-available', () => sendUpdaterEvent({ type: 'updateNotAvailable' }))
     autoUpdater.on('update-downloaded', () => {
+      sendUpdaterEvent({ type: 'updateReady', version: autoUpdater.currentVersion?.version })
       logger.success('update downloaded, it will be installed on quit')
+    })
+    autoUpdater.on('error', (error: unknown) => {
+      sendUpdaterEvent({ type: 'updateFailed', message: error instanceof Error ? error.message : String(error) })
     })
     await autoUpdater.checkForUpdates()
   }

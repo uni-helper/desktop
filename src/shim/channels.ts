@@ -10,6 +10,7 @@ export const shimChannels = {
   getSavedFileInfo: 'desktop:uni:getSavedFileInfo',
   removeSavedFile: 'desktop:uni:removeSavedFile',
   openDocument: 'desktop:uni:openDocument',
+  getUpdateManager: 'desktop:uni:getUpdateManager',
 } as const
 
 export type ShimChannel = (typeof shimChannels)[keyof typeof shimChannels]
@@ -27,8 +28,23 @@ export const windowChannels = {
 
 export type WindowChannel = (typeof windowChannels)[keyof typeof windowChannels]
 
+/**
+ * The renderer-triggered updater invoke. `getUpdateManager` (the state fetch)
+ * lives in `shimChannels` because it maps one-to-one onto a uni API;
+ * `applyUpdate` is the uni-named action channel beside it.
+ */
+export const updaterChannels = {
+  applyUpdate: 'desktop:uni:applyUpdate',
+} as const
+
+export type UpdaterChannel = (typeof updaterChannels)[keyof typeof updaterChannels]
+
+/** Main→renderer updater events; main pushes, the preload hook delivers. */
+export const updaterEventChannel = 'desktop:updater:event'
+
 /** The preload's deny-by-default invoke allowlist: every channel the shim may call. */
-export const allShimChannels: (ShimChannel | WindowChannel)[] = [
+export const allShimChannels: (ShimChannel | WindowChannel | UpdaterChannel)[] = [
   ...Object.values(shimChannels),
   ...Object.values(windowChannels),
+  ...Object.values(updaterChannels),
 ]

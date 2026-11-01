@@ -1,5 +1,7 @@
 export interface DesktopBridge {
   invoke: (channel: string, payload?: unknown) => Promise<unknown>
+  /** Push channel for main→renderer events; added by the desktop preload only. */
+  onUpdaterEvent?: (callback: (event: unknown) => void) => void
 }
 
 export interface UniResult {

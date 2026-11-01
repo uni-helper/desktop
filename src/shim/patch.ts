@@ -1,4 +1,4 @@
-import { createOpenDocument, getSavedFileInfo, getSavedFileList, removeSavedFile, saveFile } from './apis/index'
+import { createOpenDocument, getSavedFileInfo, getSavedFileList, getUpdateManager, removeSavedFile, saveFile } from './apis/index'
 
 /** Objects already patched, so repeated installs never double-wrap. */
 const patched = new WeakSet<object>()
@@ -22,4 +22,6 @@ export function patchUni(uni: Record<string, any>): void {
   uni.getSavedFileInfo = getSavedFileInfo
   uni.removeSavedFile = removeSavedFile
   uni.openDocument = createOpenDocument(uni.openDocument)
+  // A factory, assigned as-is to match uni's call pattern `uni.getUpdateManager()`.
+  uni.getUpdateManager = getUpdateManager
 }

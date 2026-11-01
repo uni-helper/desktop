@@ -3,18 +3,24 @@
  */
 // #region Types
 export type ShimChannel = (typeof shimChannels)[keyof typeof shimChannels];
+export type UpdaterChannel = (typeof updaterChannels)[keyof typeof updaterChannels];
 export type WindowChannel = (typeof windowChannels)[keyof typeof windowChannels];
 // #endregion
 
 // #region Variables
-export declare const allShimChannels: (ShimChannel | WindowChannel)[];
+export declare const allShimChannels: (ShimChannel | WindowChannel | UpdaterChannel)[];
 export declare const shimChannels: {
   readonly saveFile: "desktop:uni:saveFile";
   readonly getSavedFileList: "desktop:uni:getSavedFileList";
   readonly getSavedFileInfo: "desktop:uni:getSavedFileInfo";
   readonly removeSavedFile: "desktop:uni:removeSavedFile";
   readonly openDocument: "desktop:uni:openDocument";
+  readonly getUpdateManager: "desktop:uni:getUpdateManager";
 };
+export declare const updaterChannels: {
+  readonly applyUpdate: "desktop:uni:applyUpdate";
+};
+export declare const updaterEventChannel: string;
 export declare const windowChannels: {
   readonly minimize: "desktop:window:minimize";
   readonly toggleMaximize: "desktop:window:toggleMaximize";

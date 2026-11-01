@@ -10,6 +10,19 @@ export declare function getSavedFileInfo(_?: UniOptions): Promise<{
 export declare function getSavedFileList(_?: UniOptions): Promise<{
   fileList: any[];
 }> | undefined;
+export declare function getUpdateManager(): {
+  onCheckForUpdate: (_: (_: {
+    errMsg: string;
+  }) => void) => void;
+  onUpdateReady: (_: (_: {
+    errMsg: string;
+    version?: string;
+  }) => void) => void;
+  onUpdateFailed: (_: (_: {
+    errMsg: string;
+  }) => void) => void;
+  applyUpdate: () => Promise<unknown> | undefined;
+} | undefined;
 export declare function removeSavedFile(_?: UniOptions): Promise<{
   errMsg: string;
 }> | undefined;

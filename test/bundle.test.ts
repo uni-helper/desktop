@@ -127,5 +127,6 @@ describe('bundlePreload', () => {
     expect(output).toContain('contextBridge')
     expect(output).toContain('desktop:uni:saveFile')
     expect(output).toContain('desktop:uni:openDocument')
+    expect(output).toContain('desktop:updater:event')
   })
 })

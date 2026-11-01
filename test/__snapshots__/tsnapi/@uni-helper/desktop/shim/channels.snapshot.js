@@ -4,5 +4,7 @@
 // #region Variables
 export var allShimChannels /* const */
 export var shimChannels /* const */
+export var updaterChannels /* const */
+export var updaterEventChannel /* const */
 export var windowChannels /* const */
 // #endregion

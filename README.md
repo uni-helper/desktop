@@ -233,6 +233,7 @@ pages.json / manifest.json 中同样支持（`// #ifdef DESKTOP` 包裹节点，
 | `uni.getSavedFileInfo` | 未实现（直接 fail） | 返回文件的 `size` / `createTime` |
 | `uni.removeSavedFile` | 未实现（直接 fail） | 删除应用管理目录内的文件 |
 | `uni.openDocument` | `window.open(filePath)` | **唯一例外**：`desktop-file://` 路径交给系统默认程序打开，其余路径仍走 H5 原版 |
+| `uni.getUpdateManager` | 未实现 | 返回 uni 规范的更新管理器，桥接 electron-updater 事件；纯浏览器环境返回 undefined |
 
 `uni.setClipboardData`、`uni.getClipboardData`、`uni.chooseImage`、`uni.chooseVideo`、`uni.chooseFile` 等 H5 已实现的 API 不会被改写，行为与 H5 一致。
 
@@ -267,6 +268,19 @@ desktopWindow.close()
 ## 自动更新
 
 `updater` 配置会启用基于 electron-updater 的自动更新。若未显式配置 `pack.publish`，`updater.provider` 与 `updater.url` 会自动用作 electron-builder 的 publish 配置（生成 app-update.yml）。发布流程本身（签名、渠道、CI 上传）沿用 electron-builder 的标准做法。electron-updater 会随主进程一起打包进应用，打包产物不需要携带 node_modules。
+
+更新状态会以 `uni.getUpdateManager()` 的规范形状暴露给渲染层，零跨端改动：
+
+```js
+const manager = uni.getUpdateManager()
+
+manager.onUpdateReady(() => {
+  manager.applyUpdate() // 触发主进程 quitAndInstall，重启安装更新
+})
+manager.onUpdateFailed(({ errMsg }) => console.error(errMsg))
+```
+
+主进程在启动时检查更新并把 `checking-for-update` / `update-available` / `update-not-available` / `update-downloaded` / `error` 事件转发给渲染层；迟到订阅者会先收到最近一次事件。未下载更新时调用 `applyUpdate` 返回 `applyUpdate:fail`。
 
 ## 自定义主进程
 

@@ -476,4 +476,18 @@ describe('app lifecycle', () => {
     // Electron ignores repeat quits, so both emissions must reach the guard.
     expect(state.quit).toHaveBeenCalledTimes(2)
   })
+
+  it('getUpdateManager state handler returns no event without an updater', async () => {
+    await boot()
+    const handler = state.ipcHandlers.get('desktop:uni:getUpdateManager')!
+
+    await expect(handler({}, undefined)).resolves.toEqual({ event: null })
+  })
+
+  it('applyUpdate fails without a downloaded update', async () => {
+    await boot()
+    const handler = state.ipcHandlers.get('desktop:uni:applyUpdate')!
+
+    await expect(handler({}, undefined)).rejects.toThrow('no downloaded update')
+  })
 })
