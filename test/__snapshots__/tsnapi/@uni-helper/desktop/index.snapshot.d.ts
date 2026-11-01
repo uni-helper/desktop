@@ -97,68 +97,6 @@ export interface DesktopWindowConfig {
   kiosk?: boolean;
   closeToTray?: boolean;
 }
-export interface ManifestInfo {
-  name?: string;
-  appid?: string;
-  versionName?: string;
-  description?: string;
-  h5?: {
-    title?: string;
-    router?: {
-      mode?: string;
-      base?: string;
-    };
-  };
-}
-export interface ProjectInfo {
-  author?: string;
-  homepage?: string;
-  description?: string;
-}
-export interface ResolvedConfig {
-  root: string;
-  appName: string;
-  appId: string;
-  version: string;
-  copyright?: string;
-  author?: string;
-  homepage?: string;
-  description?: string;
-  icon: string;
-  window: ResolvedWindowConfig;
-  dev: {
-    url: string;
-    openDevtools: boolean;
-  };
-  tray: {
-    icon: string;
-    tooltip?: string;
-    menu?: DesktopTrayMenuItem[];
-  } | false;
-  updater: DesktopUpdaterConfig | false;
-  mainEntry?: string;
-  pack: {
-    autoPack: boolean;
-    output: string;
-    asar: boolean;
-    targets: {
-      win?: string[];
-      mac?: string[];
-      linux?: string[];
-    };
-    win?: Record<string, unknown>;
-    nsis?: Record<string, unknown>;
-    mac?: Record<string, unknown>;
-    dmg?: Record<string, unknown>;
-    linux?: Record<string, unknown>;
-    publish?: Record<string, unknown> | Array<Record<string, unknown>>;
-  };
-}
-export interface ResolveResult {
-  resolved: ResolvedConfig;
-  userConfig: DesktopConfig | undefined;
-  warnings: string[];
-}
 export interface UnhConfig {
   desktop?: DesktopConfig;
   [key: string]: unknown;

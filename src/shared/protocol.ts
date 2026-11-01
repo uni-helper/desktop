@@ -1,6 +1,5 @@
 import { extname } from 'node:path'
-
-export const DESKTOP_FILE_SCHEME = 'desktop-file'
+import { DESKTOP_FILE_SCHEME } from '../shim/channels'
 
 /** Wrap an absolute path into a `desktop-file://` URL servable by the app. */
 export function toDesktopFileUrl(absolutePath: string): string {

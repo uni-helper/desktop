@@ -11,10 +11,8 @@ import { DesktopError } from '../error'
 import { parseManifest } from '../shared/manifest'
 import { BUILD_APP_DIR, defaultIconPath } from '../shared/paths'
 
-export type { ManifestInfo } from '../shared/manifest'
-
 /** Metadata read from the project `package.json`, used to fill installer fields. */
-export interface ProjectInfo {
+interface ProjectInfo {
   author?: string
   homepage?: string
   description?: string

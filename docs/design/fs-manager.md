@@ -69,10 +69,10 @@
 - `writeFile` 请求 `{ filePath: string, data: Uint8Array | ArrayBuffer }`
   （字符串数据渲染端先转 utf-8 字节）；响应 `{}`。
 
-通道组独立于 `shimChannels`（uni API 通道组），因此 vite wrapper 的导出
-推导不会误把 `fsReadFile`/`fsWriteFile` 当作 uni API 导出；
-`getFileSystemManager` 工厂单列一行显式导出（见 `src/vite/index.ts` 的
-wrapper 模板）。
+通道组独立于 `shimChannels`（uni API 通道组）；vite wrapper 的导出清单显式
+列出 uni API 名，`fsReadFile`/`fsWriteFile` 因此不会作为 uni API 导出，
+`getFileSystemManager` 工厂名列于清单（见 `src/vite/index.ts` 的 wrapper
+模板）。
 
 ## 4. 上限
 

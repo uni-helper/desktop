@@ -1,13 +1,7 @@
+import type { UpdaterEvent } from '../channels'
 import { getBridge } from '../bridge'
 import { shimChannels, updaterChannels } from '../channels'
 import { invokeUniApi } from '../result'
-
-/** Event payload pushed by the main process over `updaterEventChannel`. */
-interface UpdaterEvent {
-  type: 'checkForUpdate' | 'updateAvailable' | 'updateNotAvailable' | 'updateReady' | 'updateFailed'
-  version?: string
-  message?: string
-}
 
 /**
  * Desktop `uni.getUpdateManager()`: uni-spec shape over the electron-updater
@@ -35,7 +29,7 @@ export function getUpdateManager(): {
     else if (event.type === 'updateReady')
       listeners.updateReady.forEach(callback => callback({ errMsg: 'ok', version: event.version }))
     else if (event.type === 'updateFailed')
-      listeners.updateFailed.forEach(callback => callback({ errMsg: event.message ?? 'fail' }))
+      listeners.updateFailed.forEach(callback => callback({ errMsg: event.message }))
   }
 
   // Register through the preload hook, then pull the last event (late subscribe).

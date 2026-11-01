@@ -3,12 +3,9 @@
  */
 // #region Functions
 export function createDesktopApp(_) {}
-export function parseDesktopFileUrl(_) {}
-export function toDesktopFileUrl(_) {}
 // #endregion
 
 // #region Variables
-export var DESKTOP_FILE_SCHEME /* const */
 export var MAX_SAVE_BYTES /* const */
 export var MAX_SAVED_FILES /* const */
 // #endregion

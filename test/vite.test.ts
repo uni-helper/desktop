@@ -155,10 +155,10 @@ describe('uniDesktop vite plugin', () => {
     expect(code).toContain(`export * from '${UNI_H5_ID}'`)
     expect(code).toContain('\'@uni-helper/desktop/shim/apis\'')
     expect(code).toContain('createOpenDocument')
-    // The desktop implementations replace uni-h5's own exports. The saved-file
-    // names are derived from the shim channel list.
+    // The desktop implementations replace uni-h5's own exports. The export
+    // list is explicit: exactly the uni APIs the desktop shim provides.
     expect(code).toContain('export const openDocument = createOpenDocument(openDocumentH5)')
-    expect(code).toContain('export { saveFile, getSavedFileList, getSavedFileInfo, removeSavedFile, getUpdateManager } from \'@uni-helper/desktop/shim/apis\'')
+    expect(code).toContain('export { saveFile, getSavedFileList, getSavedFileInfo, removeSavedFile, getUpdateManager, getFileSystemManager } from \'@uni-helper/desktop/shim/apis\'')
     // The wrapper installs the runtime shim itself: it evaluates before uni
     // assigns the global `uni` in both dev and tree-shaken builds.
     expect(code).toContain('installDesktopShim()')

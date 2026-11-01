@@ -1,9 +1,9 @@
 import type { UniOptions } from '../types'
 import { getBridgeOrThrow } from '../bridge'
-import { shimChannels } from '../channels'
+import { DESKTOP_FILE_SCHEME, shimChannels } from '../channels'
 import { invokeUniApi } from '../result'
 
-const DESKTOP_FILE_PREFIX = 'desktop-file://'
+const DESKTOP_FILE_PREFIX = `${DESKTOP_FILE_SCHEME}://`
 
 /**
  * Create the desktop `openDocument`. H5's `openDocument` is

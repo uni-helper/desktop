@@ -5,11 +5,25 @@
 export type FsChannel = (typeof fsChannels)[keyof typeof fsChannels];
 export type ShimChannel = (typeof shimChannels)[keyof typeof shimChannels];
 export type UpdaterChannel = (typeof updaterChannels)[keyof typeof updaterChannels];
+export type UpdaterEvent = {
+  type: 'checkForUpdate';
+} | {
+  type: 'updateAvailable';
+} | {
+  type: 'updateNotAvailable';
+} | {
+  type: 'updateReady';
+  version?: string;
+} | {
+  type: 'updateFailed';
+  message: string;
+};
 export type WindowChannel = (typeof windowChannels)[keyof typeof windowChannels];
 // #endregion
 
 // #region Variables
 export declare const allShimChannels: (ShimChannel | WindowChannel | UpdaterChannel | FsChannel)[];
+export declare const DESKTOP_FILE_SCHEME: string;
 export declare const fsChannels: {
   readonly readFile: "desktop:uni:fs:readFile";
   readonly writeFile: "desktop:uni:fs:writeFile";

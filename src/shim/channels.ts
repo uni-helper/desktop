@@ -1,9 +1,19 @@
 /**
- * IPC channels for APIs that uni-h5 does not implement. APIs that uni-h5
- * already ships (clipboard, chooseImage/Video/File, ...) are deliberately
- * absent here: the shim leaves them untouched so desktop behaviour stays
- * identical to H5.
+ * The wire contract shared by the main process, the preload allowlist and the
+ * renderer shim: IPC channels for APIs that uni-h5 does not implement, the
+ * `desktop-file://` scheme and the updater event shape. Channels for APIs
+ * uni-h5 already ships (clipboard, chooseImage/Video/File, ...) are
+ * deliberately absent: the shim leaves them untouched so desktop behaviour
+ * stays identical to H5.
  */
+
+/**
+ * URL scheme of the shim's saved-file paths (`desktop-file://f/<path>`),
+ * shared by the main process (protocol handler) and the renderer shim
+ * (`openDocument` routing) so the wire string has a single home.
+ */
+export const DESKTOP_FILE_SCHEME = 'desktop-file'
+
 export const shimChannels = {
   saveFile: 'desktop:uni:saveFile',
   getSavedFileList: 'desktop:uni:getSavedFileList',
@@ -41,6 +51,18 @@ export type UpdaterChannel = (typeof updaterChannels)[keyof typeof updaterChanne
 
 /** Main→renderer updater events; main pushes, the preload hook delivers. */
 export const updaterEventChannel = 'desktop:updater:event'
+
+/**
+ * State pushed to the renderer while the updater runs; uni-shaped by contract.
+ * The main process (emitter) and the renderer shim (consumer) both import it
+ * from here, so the payload shape cannot drift between the two bundles.
+ */
+export type UpdaterEvent
+  = | { type: 'checkForUpdate' }
+    | { type: 'updateAvailable' }
+    | { type: 'updateNotAvailable' }
+    | { type: 'updateReady', version?: string }
+    | { type: 'updateFailed', message: string }
 
 /**
  * File-system channels (prototype subset, see docs/design/fs-manager.md). One

@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { extname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { parseDesktopFileUrl, toDesktopFileUrl } from '../../src/shared/protocol'
 
 const state = vi.hoisted(() => ({
   ipcHandlers: new Map<string, (event: unknown, ...args: any[]) => unknown>(),
@@ -165,7 +166,7 @@ describe('saved-file ipc handlers', () => {
     expect(result.savedFilePath.startsWith('desktop-file://f/')).toBe(true)
     const names = (await readdir(savedRoot())).filter(name => name.endsWith('.png'))
     expect(names).toHaveLength(1)
-    const savedPath = runtime.parseDesktopFileUrl(result.savedFilePath)
+    const savedPath = parseDesktopFileUrl(result.savedFilePath)
     expect(savedPath.startsWith(savedRoot())).toBe(true)
     expect(await readFile(savedPath, 'utf8')).toBe('png-bytes')
   })
@@ -187,7 +188,7 @@ describe('saved-file ipc handlers', () => {
       mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     }) as { savedFilePath: string }
 
-    const savedPath = runtime.parseDesktopFileUrl(result.savedFilePath)
+    const savedPath = parseDesktopFileUrl(result.savedFilePath)
     expect(savedPath.endsWith('.docx')).toBe(true)
   })
 
@@ -200,13 +201,13 @@ describe('saved-file ipc handlers', () => {
       mime: 'application/octet-stream',
       fileName: '报告最终版.docx',
     }) as { savedFilePath: string }
-    expect(runtime.parseDesktopFileUrl(named.savedFilePath).endsWith('.docx')).toBe(true)
+    expect(parseDesktopFileUrl(named.savedFilePath).endsWith('.docx')).toBe(true)
 
     const nameless = await handler({}, {
       bytes: new TextEncoder().encode('raw-bytes'),
       fileName: 'noext',
     }) as { savedFilePath: string }
-    const savedPath = runtime.parseDesktopFileUrl(nameless.savedFilePath)
+    const savedPath = parseDesktopFileUrl(nameless.savedFilePath)
     expect(extname(savedPath)).toBe('')
   })
 
@@ -304,7 +305,7 @@ describe('desktop-file protocol', () => {
     await writeFile(filePath, content)
     const handler = state.protocolHandlers.get('desktop-file')!
 
-    const response = await handler(new Request(runtime.toDesktopFileUrl(filePath)))
+    const response = await handler(new Request(toDesktopFileUrl(filePath)))
 
     expect(response.status).toBe(200)
     expect(new Uint8Array(await response.arrayBuffer())).toEqual(content)
@@ -315,7 +316,7 @@ describe('desktop-file protocol', () => {
     await boot()
     const handler = state.protocolHandlers.get('desktop-file')!
 
-    const response = await handler(new Request(runtime.toDesktopFileUrl(join(savedRoot(), 'missing.png'))))
+    const response = await handler(new Request(toDesktopFileUrl(join(savedRoot(), 'missing.png'))))
 
     expect(response.status).toBe(404)
   })
@@ -327,7 +328,7 @@ describe('desktop-file protocol', () => {
     await writeFile(outsidePath, 'x')
     const handler = state.protocolHandlers.get('desktop-file')!
 
-    const response = await handler(new Request(runtime.toDesktopFileUrl(outsidePath)))
+    const response = await handler(new Request(toDesktopFileUrl(outsidePath)))
 
     expect(response.status).toBe(403)
   })

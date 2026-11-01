@@ -3,12 +3,6 @@
  */
 // #region Functions
 export declare function createOpenDocument(_: ((_?: UniOptions) => unknown) | undefined): (_?: UniOptions) => unknown;
-export declare function fsReadFile(_?: any): Promise<{
-  data: string | ArrayBuffer;
-}> | undefined;
-export declare function fsWriteFile(_?: any): Promise<{
-  errMsg: string;
-}> | undefined;
 export declare function getFileSystemManager(): {
   readFile: typeof fsReadFile;
   writeFile: typeof fsWriteFile;

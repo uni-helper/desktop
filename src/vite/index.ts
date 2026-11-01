@@ -5,7 +5,6 @@ import { resolve } from 'node:path'
 import process from 'node:process'
 import { DesktopError } from '../error'
 import { logger } from '../log'
-import { shimChannels } from '../shim/channels'
 import { assembleDesktopApp, isDesktopBuild, startDesktopDevRuntime } from './driver'
 import { ensureDesktopProject, ensureDesktopUniScript } from './setup'
 
@@ -19,17 +18,13 @@ const DESKTOP_APIS_IMPORT = '@uni-helper/desktop/shim/apis'
 const SHIM_IMPORT = '@uni-helper/desktop/shim'
 
 /**
- * The APIs the wrapper re-exports as desktop implementations. Derived from the
- * shim channel names, so a new shim API only needs its channel added there;
- * `openDocument` is special-cased below because it wraps the H5 fallback.
- */
-const SAVED_FILE_APIS = Object.keys(shimChannels).filter(name => name !== 'openDocument')
-
-/**
- * The wrapper re-exports everything uni-h5 ships, but replaces the saved-file
- * APIs (unsupported stubs on H5) and `openDocument` (a `window.open` on H5,
+ * The wrapper re-exports everything uni-h5 ships, but replaces the uni APIs
+ * the desktop shim provides (the saved-file set, `getUpdateManager`, the
+ * `getFileSystemManager` factory) and `openDocument` (a `window.open` on H5,
  * which cannot hand a file to the OS) with the desktop implementations, and
- * installs the runtime shim as a module side effect.
+ * installs the runtime shim as a module side effect. The export list is
+ * explicit and kept in sync by hand with the channel groups in
+ * `shim/channels`: every name here has its invoke channel there.
  *
  * uni's vite pipeline rewrites every `uni.xxx(...)` call in app code into
  * `import { xxx } from '@dcloudio/uni-h5'` in tree-shaken builds, or leaves it
@@ -44,8 +39,7 @@ function wrapperSource(): string {
 export * from '${UNI_H5_ID}'
 import { openDocument as openDocumentH5 } from '${UNI_H5_ID}'
 import { createOpenDocument } from '${DESKTOP_APIS_IMPORT}'
-export { ${SAVED_FILE_APIS.join(', ')} } from '${DESKTOP_APIS_IMPORT}'
-export { getFileSystemManager } from '${DESKTOP_APIS_IMPORT}'
+export { saveFile, getSavedFileList, getSavedFileInfo, removeSavedFile, getUpdateManager, getFileSystemManager } from '${DESKTOP_APIS_IMPORT}'
 export const openDocument = createOpenDocument(openDocumentH5)
 installDesktopShim()
 `

@@ -20,7 +20,7 @@ function decode(bytes: Uint8Array, encoding: string | undefined): string | Array
 }
 
 /** Desktop `getFileSystemManager().readFile`: read a file inside the managed directory. */
-export function fsReadFile(options: any = {}): Promise<{ data: string | ArrayBuffer }> | undefined {
+function fsReadFile(options: any = {}): Promise<{ data: string | ArrayBuffer }> | undefined {
   return invokeUniApi(
     'readFile',
     options,
@@ -45,7 +45,7 @@ export function getFileSystemManager(): {
 }
 
 /** Desktop `getFileSystemManager().writeFile`: overwrite a file inside the managed directory. */
-export function fsWriteFile(options: any = {}): Promise<{ errMsg: string }> | undefined {
+function fsWriteFile(options: any = {}): Promise<{ errMsg: string }> | undefined {
   return invokeUniApi(
     'writeFile',
     options,

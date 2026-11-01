@@ -1,5 +1,6 @@
 import type { MenuItemConstructorOptions } from 'electron'
 import type { BakedDesktopConfig } from '../baked'
+import type { UpdaterEvent } from '../shim/channels'
 import type { DesktopTrayMenuAction } from '../types'
 import { randomUUID } from 'node:crypto'
 import { mkdir, readdir, readFile, realpath, stat, unlink, writeFile } from 'node:fs/promises'
@@ -9,11 +10,10 @@ import { fileURLToPath } from 'node:url'
 import { createConsola } from 'consola/basic'
 import { app, BrowserWindow, ipcMain, Menu, protocol, shell, Tray } from 'electron'
 import { APP_RESOURCES_DIR, APP_WEB_DIR, PRELOAD_BUNDLE_FILE } from '../shared/paths'
-import { DESKTOP_FILE_SCHEME, EXTENSION_BY_MIME, mimeFromExtension, parseDesktopFileUrl, toDesktopFileUrl } from '../shared/protocol'
-import { fsChannels, shimChannels, updaterChannels, updaterEventChannel, windowChannels } from '../shim/channels'
+import { EXTENSION_BY_MIME, mimeFromExtension, parseDesktopFileUrl, toDesktopFileUrl } from '../shared/protocol'
+import { DESKTOP_FILE_SCHEME, fsChannels, shimChannels, updaterChannels, updaterEventChannel, windowChannels } from '../shim/channels'
 
 export type { BakedDesktopConfig } from '../baked'
-export { DESKTOP_FILE_SCHEME, parseDesktopFileUrl, toDesktopFileUrl }
 
 /**
  * The basic reporter instead of the fancy one: this module ends up bundled into
@@ -136,14 +136,6 @@ async function serveDesktopFileRequest(request: Request): Promise<Response> {
     return new Response('not found', { status: 404 })
   }
 }
-
-/** State pushed to the renderer while the updater runs; uni-shaped by contract. */
-type UpdaterEvent
-  = | { type: 'checkForUpdate' }
-    | { type: 'updateAvailable' }
-    | { type: 'updateNotAvailable' }
-    | { type: 'updateReady', version?: string }
-    | { type: 'updateFailed', message: string }
 
 let lastUpdaterEvent: UpdaterEvent | undefined
 

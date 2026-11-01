@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { DESKTOP_FILE_SCHEME, EXTENSION_BY_MIME, mimeFromExtension, parseDesktopFileUrl, toDesktopFileUrl } from '../src/shared/protocol'
+import { EXTENSION_BY_MIME, mimeFromExtension, parseDesktopFileUrl, toDesktopFileUrl } from '../src/shared/protocol'
+import { DESKTOP_FILE_SCHEME } from '../src/shim/channels'
 
 describe('desktop-file url', () => {
   it('round-trips absolute paths', () => {
