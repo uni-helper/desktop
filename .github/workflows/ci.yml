@@ -32,6 +32,18 @@ jobs:
           test -f examples/quick-start/dist/build/desktop/resources/icon.png
           grep -q "desktop:uni:saveFile" examples/quick-start/dist/build/desktop/electron/main.cjs
 
+  knip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm knip
+
   # coverage:
   #   uses: sxzz/workflows/.github/workflows/coverage.yml@main
   #   needs: unit-test
