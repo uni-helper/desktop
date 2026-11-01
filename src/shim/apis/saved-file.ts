@@ -26,7 +26,11 @@ async function readAsBytes(url: string): Promise<{ bytes: Uint8Array, mime?: str
   return { bytes, mime: contentType || undefined }
 }
 
-/** Desktop `saveFile`: persist renderer bytes into the app-managed directory. */
+/**
+ * Desktop `saveFile`: persist renderer bytes into the app-managed directory.
+ * `fileName` is a desktop-only extension (uni.saveFile 的桌面扩展：指定原始文件
+ * 名以保留扩展名).
+ */
 export function saveFile(options: UniOptions = {}): Promise<{ savedFilePath: string }> | undefined {
   return invokeUniApi(
     'saveFile',
@@ -35,7 +39,8 @@ export function saveFile(options: UniOptions = {}): Promise<{ savedFilePath: str
       if (typeof options.tempFilePath !== 'string')
         throw new Error('tempFilePath is required')
       const { bytes, mime } = await readAsBytes(options.tempFilePath)
-      return await getBridgeOrThrow().invoke(shimChannels.saveFile, { bytes, mime }) as { savedFilePath: string }
+      const fileName = typeof options.fileName === 'string' ? options.fileName : undefined
+      return await getBridgeOrThrow().invoke(shimChannels.saveFile, { bytes, mime, fileName }) as { savedFilePath: string }
     },
   )
 }

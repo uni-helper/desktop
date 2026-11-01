@@ -1,7 +1,7 @@
 import type { BakedDesktopConfig } from '../../src/baked'
 import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { extname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -145,6 +145,38 @@ describe('saved-file ipc handlers', () => {
 
     await expect(handler({}, { bytes: 'nope' })).rejects.toThrow()
     await expect(handler({}, null)).rejects.toThrow()
+  })
+
+  it('saveFile derives docx from the OOXML mime', async () => {
+    await boot()
+    const handler = state.ipcHandlers.get('desktop:uni:saveFile')!
+
+    const result = await handler({}, {
+      bytes: new TextEncoder().encode('docx-bytes'),
+      mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    }) as { savedFilePath: string }
+
+    const savedPath = runtime.parseDesktopFileUrl(result.savedFilePath)
+    expect(savedPath.endsWith('.docx')).toBe(true)
+  })
+
+  it('saveFile prefers an explicit fileName extension', async () => {
+    await boot()
+    const handler = state.ipcHandlers.get('desktop:uni:saveFile')!
+
+    const named = await handler({}, {
+      bytes: new TextEncoder().encode('docx-bytes'),
+      mime: 'application/octet-stream',
+      fileName: '报告最终版.docx',
+    }) as { savedFilePath: string }
+    expect(runtime.parseDesktopFileUrl(named.savedFilePath).endsWith('.docx')).toBe(true)
+
+    const nameless = await handler({}, {
+      bytes: new TextEncoder().encode('raw-bytes'),
+      fileName: 'noext',
+    }) as { savedFilePath: string }
+    const savedPath = runtime.parseDesktopFileUrl(nameless.savedFilePath)
+    expect(extname(savedPath)).toBe('')
   })
 
   it('getSavedFileInfo and removeSavedFile reject paths outside the managed directory', async () => {

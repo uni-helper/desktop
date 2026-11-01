@@ -222,7 +222,7 @@ pages.json / manifest.json 中同样支持（`// #ifdef DESKTOP` 包裹节点，
 
 | API | H5 端状态 | 桌面端行为 |
 | --- | --- | --- |
-| `uni.saveFile` | 未实现（直接 fail） | 把临时文件写入应用管理目录，返回 `savedFilePath` |
+| `uni.saveFile` | 未实现（直接 fail） | 把临时文件写入应用管理目录，保留扩展名（未知类型可传 `fileName` 指定），返回 `savedFilePath` |
 | `uni.getSavedFileList` | 未实现（直接 fail） | 列出应用管理目录内的文件 |
 | `uni.getSavedFileInfo` | 未实现（直接 fail） | 返回文件的 `size` / `createTime` |
 | `uni.removeSavedFile` | 未实现（直接 fail） | 删除应用管理目录内的文件 |
@@ -237,6 +237,8 @@ pages.json / manifest.json 中同样支持（`// #ifdef DESKTOP` 包裹节点，
 保存后的 `savedFilePath` 形如 `desktop-file://f/<绝对路径>`，由自定义协议提供给渲染进程加载，并严格限制在应用管理目录内。文件字节以 `Uint8Array` 形式通过 IPC 传输（不再转 base64），大文件不会额外占用数倍内存。`uni.getSavedFileList` / `getSavedFileInfo` / `removeSavedFile` / `openDocument` 只接受该目录内的路径。
 
 所有垫片 API 同时支持回调风格与 Promise 风格，错误遵循 `errMsg: 'xxx:fail ...'` 约定。在纯浏览器环境打开时垫片整体 no-op。
+
+保存文件保留原始扩展名：优先取调用方传入的 `fileName`，否则按浏览器上报的 MIME 类型推导；都不已知时保存为无扩展名文件。
 
 ## 自动更新
 

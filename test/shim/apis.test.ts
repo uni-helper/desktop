@@ -86,10 +86,24 @@ describe('saved files', () => {
     expect(res).toEqual({ errMsg: 'saveFile:ok', savedFilePath: 'desktop-file://f/saved' })
     // Bytes are transferred as-is; a base64 string would triple peak memory for
     // large files.
-    const payload = bridge.invoke.mock.calls[0]?.[1] as { bytes: Uint8Array, mime: string }
+    const payload = bridge.invoke.mock.calls[0]?.[1] as { bytes: Uint8Array, mime: string, fileName?: string }
     expect(payload.mime).toBe('image/png')
     expect(payload.bytes).toBeInstanceOf(Uint8Array)
     expect(new TextDecoder().decode(payload.bytes)).toBe('png-bytes')
+    // No name given: the extension comes from the MIME table in the main process.
+    expect(payload.fileName).toBeUndefined()
+  })
+
+  it('saveFile forwards an explicit fileName for the extension', async () => {
+    const tempFilePath = stubTempFile('docx-bytes', 'application/octet-stream')
+    const bridge = createBridge({
+      'desktop:uni:saveFile': () => ({ savedFilePath: 'desktop-file://f/saved' }),
+    })
+
+    await saveFile({ tempFilePath, fileName: 'a.docx' })
+
+    const payload = bridge.invoke.mock.calls[0]?.[1] as { fileName?: string }
+    expect(payload.fileName).toBe('a.docx')
   })
 
   it('saveFile reports an unreadable temp path', async () => {

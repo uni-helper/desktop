@@ -35,6 +35,23 @@ const MIME_BY_EXTENSION: Record<string, string> = {
   '.txt': 'text/plain',
   '.json': 'application/json',
   '.zip': 'application/zip',
+  // Common document types: uni.saveFile → openDocument must round-trip the
+  // files desktop users actually open, not just images and video. `.htm`
+  // precedes `.html` so the reverse map resolves `text/html` to `.html`.
+  '.doc': 'application/msword',
+  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  '.xls': 'application/vnd.ms-excel',
+  '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  '.ppt': 'application/vnd.ms-powerpoint',
+  '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  '.csv': 'text/csv',
+  '.htm': 'text/html',
+  '.html': 'text/html',
+  '.xml': 'application/xml',
+  '.mp3': 'audio/mpeg',
+  '.wav': 'audio/wav',
+  '.ogg': 'audio/ogg',
+  '.m4a': 'audio/mp4',
 }
 
 /** Reverse lookup derived from the same table, so the two can never drift. */

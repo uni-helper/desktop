@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DESKTOP_FILE_SCHEME, mimeFromExtension, parseDesktopFileUrl, toDesktopFileUrl } from '../src/shared/protocol'
+import { DESKTOP_FILE_SCHEME, EXTENSION_BY_MIME, mimeFromExtension, parseDesktopFileUrl, toDesktopFileUrl } from '../src/shared/protocol'
 
 describe('desktop-file url', () => {
   it('round-trips absolute paths', () => {
@@ -27,5 +27,12 @@ describe('mimeFromExtension', () => {
     expect(mimeFromExtension('/a/b.PNG')).toBe('image/png')
     expect(mimeFromExtension('/a/b.mp4')).toBe('video/mp4')
     expect(mimeFromExtension('/a/b.unknown')).toBe('application/octet-stream')
+  })
+
+  it('round-trips the document types desktop users open', () => {
+    expect(mimeFromExtension('/a/b.docx')).toBe('application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    expect(EXTENSION_BY_MIME['application/vnd.openxmlformats-officedocument.wordprocessingml.document']).toBe('.docx')
+    // `.htm` precedes `.html` in the table, so the reverse map resolves to `.html`.
+    expect(EXTENSION_BY_MIME['text/html']).toBe('.html')
   })
 })

@@ -2,7 +2,7 @@ import type { MenuItemConstructorOptions } from 'electron'
 import type { BakedDesktopConfig } from '../baked'
 import { randomUUID } from 'node:crypto'
 import { mkdir, readdir, readFile, realpath, stat, unlink, writeFile } from 'node:fs/promises'
-import { join, sep } from 'node:path'
+import { extname, join, sep } from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { createConsola } from 'consola/basic'
@@ -132,7 +132,10 @@ function registerIpcHandlers(): void {
     if (!(bytes instanceof Uint8Array) && !(bytes instanceof ArrayBuffer))
       throw new TypeError('bytes must be a Uint8Array or ArrayBuffer')
     const mime = typeof data.mime === 'string' ? data.mime : undefined
-    const extension = mime ? EXTENSION_BY_MIME[mime] ?? '' : ''
+    // Extension priority: an explicit fileName (renderer-side escape hatch)
+    // wins; the MIME table covers the types browsers report for chosen files.
+    const fileName = typeof data.fileName === 'string' ? data.fileName : undefined
+    const extension = extname(fileName ?? '') || (mime ? EXTENSION_BY_MIME[mime] ?? '' : '')
     await mkdir(savedRoot(), { recursive: true })
     const target = join(savedRoot(), `${randomUUID()}${extension}`)
     await writeFile(target, bytes instanceof ArrayBuffer ? new Uint8Array(bytes) : bytes)
