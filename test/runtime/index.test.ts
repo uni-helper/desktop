@@ -69,6 +69,9 @@ let runtime: typeof import('../../src/runtime/index')
 
 beforeEach(async () => {
   vi.resetModules()
+  // Disconnect listeners live on the real process and would pile up across
+  // tests (the runtime registers one per boot); keep the count per-test exact.
+  process.removeAllListeners('disconnect')
   state.ipcHandlers.clear()
   state.protocolHandlers.clear()
   state.windowOptions = undefined
@@ -364,5 +367,16 @@ describe('app lifecycle', () => {
     expect(state.registerSchemes).toHaveBeenCalledWith([
       { scheme: 'desktop-file', privileges: { secure: true, supportFetchAPI: true, stream: true } },
     ])
+  })
+
+  it('quits when the dev ipc channel disconnects', async () => {
+    boot()
+    await vi.waitFor(() => expect(state.protocolHandlers.has('desktop-file')).toBe(true))
+
+    process.emit('disconnect')
+    process.emit('disconnect')
+
+    // Electron ignores repeat quits, so both emissions must reach the guard.
+    expect(state.quit).toHaveBeenCalledTimes(2)
   })
 })

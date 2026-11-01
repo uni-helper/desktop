@@ -97,6 +97,8 @@ function assertObjectPayload(value: unknown): Record<string, unknown> {
 
 let protocolRegistered = false
 
+let disconnectGuardRegistered = false
+
 function registerDesktopFileProtocol(): void {
   if (protocolRegistered)
     return
@@ -335,6 +337,14 @@ async function setupUpdater(baked: BakedDesktopConfig): Promise<void> {
  * main process entry so the custom protocol is registered before `ready`.
  */
 export function createDesktopApp(baked: BakedDesktopConfig): void {
+  // In dev the shell is launched from the uni process with an IPC channel on
+  // the fourth stdio stream; when that process dies the channel closes and the
+  // shell must quit instead of lingering as an orphan window. Production
+  // launches have no IPC channel, so this never fires there.
+  if (!disconnectGuardRegistered) {
+    disconnectGuardRegistered = true
+    process.on('disconnect', () => app.quit())
+  }
   registerDesktopFileProtocol()
   registerIpcHandlers()
 
