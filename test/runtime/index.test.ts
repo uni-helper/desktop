@@ -2,7 +2,7 @@ import type { BakedDesktopConfig } from '../../src/baked'
 import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const state = vi.hoisted(() => ({
@@ -255,13 +255,48 @@ describe('navigation hardening', () => {
     return event
   }
 
-  it('packaged mode allows file navigation (current prefix semantics)', async () => {
+  it('packaged mode blocks file navigation outside the app web dir', async () => {
     await boot()
 
-    // Pinned deliberately; plan 003 scopes this to the app web dir.
-    const event = navigate('file:///any/where/index.html')
+    const event = navigate('file:///etc/index.html')
+
+    expect(event.preventDefault).toHaveBeenCalled()
+    expect(state.openExternalUrls).toEqual([])
+  })
+
+  it('packaged mode navigates within the app web dir', async () => {
+    await boot()
+
+    // The containment check compares parsed paths only, so the target file
+    // does not need to exist.
+    const webDir = join(fileURLToPath(new URL('../../src', import.meta.url)), 'web')
+    const event = navigate(pathToFileURL(join(webDir, 'index.html')).href)
 
     expect(event.preventDefault).not.toHaveBeenCalled()
+  })
+
+  it('prefix lookalikes are blocked', async () => {
+    vi.stubEnv('DESKTOP_DEV_URL', 'http://localhost:5173')
+    await boot()
+
+    const evilHost = navigate('http://localhost:5173.evil.com/')
+    const evilUserInfo = navigate('http://localhost:5173@evil.com/')
+
+    expect(evilHost.preventDefault).toHaveBeenCalled()
+    expect(evilUserInfo.preventDefault).toHaveBeenCalled()
+    vi.unstubAllEnvs()
+  })
+
+  it('openExternal only receives web schemes', async () => {
+    vi.stubEnv('DESKTOP_DEV_URL', 'http://localhost:5173')
+    await boot()
+
+    const onOpen = state.window.webContents.setWindowOpenHandler.mock.calls[0]?.[0] as (details: { url: string }) => { action: string }
+    const result = onOpen({ url: 'file:///etc/passwd' })
+
+    expect(result).toEqual({ action: 'deny' })
+    expect(state.openExternalUrls).toEqual([])
+    vi.unstubAllEnvs()
   })
 
   it('dev mode navigates within the dev url', async () => {

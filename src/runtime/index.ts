@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto'
 import { mkdir, readdir, readFile, realpath, stat, unlink, writeFile } from 'node:fs/promises'
 import { join, sep } from 'node:path'
 import process from 'node:process'
+import { fileURLToPath } from 'node:url'
 import { createConsola } from 'consola/basic'
 import { app, BrowserWindow, ipcMain, Menu, protocol, shell, Tray } from 'electron'
 import { DESKTOP_FILE_SCHEME, EXTENSION_BY_MIME, mimeFromExtension, parseDesktopFileUrl, toDesktopFileUrl } from '../shared/protocol'
@@ -175,23 +176,67 @@ function registerIpcHandlers(): void {
  * Keep the renderer on app-owned content: external links open in the system
  * browser and nothing can navigate the window away from the app. Without this
  * the preload bridge (and therefore the file IPC) would be handed to any
- * remote page the renderer navigates to.
+ * remote page the renderer navigates to. Checks compare parsed URLs, not
+ * string prefixes: `http://localhost:5173.evil.com` must not pass a devUrl of
+ * `http://localhost:5173`.
  */
 function hardenNavigation(window: BrowserWindow, devUrl: string | undefined): void {
+  let devOrigin: string | undefined
+  try {
+    devOrigin = devUrl ? new URL(devUrl).origin : undefined
+  }
+  catch {
+    logger.warn(`invalid DESKTOP_DEV_URL, external navigation stays blocked: ${devUrl}`)
+  }
+  // The packaged app's own pages, inside the asar; every other file:// url is
+  // renderer-controlled content and must not load in this window.
+  const webDir = join(__dirname, '..', 'web')
+
+  const openExternal = (url: string): void => {
+    let parsed: URL
+    try {
+      parsed = new URL(url)
+    }
+    catch {
+      // Renderer-supplied urls can be malformed (e.g. `http://localhost:5173@`).
+      // Unclassifiable means untrusted: nothing is handed to the shell.
+      return
+    }
+    // Only web links go to the OS shell: other schemes reach OS handlers that
+    // can execute content, and this window's renderer is not trusted.
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:')
+      return
+    shell.openExternal(url).catch((error: unknown) => {
+      logger.warn(`failed to open ${url}:`, error instanceof Error ? error.message : error)
+    })
+  }
+
+  const isAppUrl = (url: string): boolean => {
+    try {
+      const parsed = new URL(url)
+      if (devOrigin)
+        return parsed.origin === devOrigin
+      if (parsed.protocol !== 'file:')
+        return false
+      return join(fileURLToPath(parsed), sep).startsWith(join(webDir, sep))
+    }
+    catch {
+      return false
+    }
+  }
+
   window.webContents.setWindowOpenHandler(({ url }) => {
-    if (devUrl && url.startsWith(devUrl))
+    if (isAppUrl(url))
       return { action: 'allow' }
-    void shell.openExternal(url)
+    openExternal(url)
     return { action: 'deny' }
   })
 
   window.webContents.on('will-navigate', (event, url) => {
-    if (devUrl && url.startsWith(devUrl))
-      return
-    if (!devUrl && url.startsWith('file://'))
+    if (isAppUrl(url))
       return
     event.preventDefault()
-    void shell.openExternal(url)
+    openExternal(url)
   })
 }
 
