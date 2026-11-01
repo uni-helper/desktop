@@ -70,6 +70,21 @@ describe('bundleEntry', () => {
     const output = await readFile(join(outDir, 'main.cjs'), 'utf8')
     expect(output).toContain('require("electron")')
   })
+
+  it('bundles electron-updater so a packaged app can auto-update', async () => {
+    await bundleEntry({
+      entryPath: join(templateDir, 'main.ts'),
+      outDir,
+      baked,
+      alias: { '@uni-helper/desktop/shim': shimSource, '@uni-helper/desktop/shim/channels': shimChannelsSource },
+    })
+
+    const output = await readFile(join(outDir, 'main.cjs'), 'utf8')
+    // Externalized, the packaged app (no node_modules in the asar) could not
+    // resolve electron-updater and auto update silently died.
+    expect(output).not.toContain('require("electron-updater")')
+    expect(output).toContain('autoUpdater')
+  })
 })
 
 describe('bundleEntry watch', () => {

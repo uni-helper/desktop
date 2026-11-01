@@ -10,7 +10,8 @@ export default antfu(
     vue: {
       sfcBlocks: false,
     },
-    ignores: ['**/index.html'],
+    // `plans/` holds generated planning documents, not code.
+    ignores: ['**/index.html', 'plans'],
   },
   {
     files: ['src/**/*.ts'],

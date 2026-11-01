@@ -4,7 +4,9 @@ import { join } from 'node:path'
 import { build, context } from 'esbuild'
 import { logger } from '../log'
 
-const ELECTRON_EXTERNALS = ['electron', 'electron-updater']
+// `electron` must stay a runtime require; electron-updater is bundled so the
+// packaged app (which ships no node_modules) can still auto-update.
+const ELECTRON_EXTERNALS = ['electron']
 
 export interface BundleEntryOptions {
   /** Absolute path to the main process entry (template or custom) */
