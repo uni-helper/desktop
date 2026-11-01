@@ -25,6 +25,8 @@
 pnpm add -D @uni-helper/desktop electron electron-builder electron-updater
 ```
 
+要求 Electron ≥ 25（运行时用到 `protocol.handle` 与内置 Node 18 的全局 `Request`/`Response`）。
+
 做两处接线。其一，在 package.json 声明桌面平台（uni 官方的自定义条件编译平台，缺少它时运行会得到明确报错与可粘贴片段，见[条件编译](#条件编译)）：
 
 ```json

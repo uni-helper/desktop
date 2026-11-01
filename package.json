@@ -61,7 +61,7 @@
     "prepare": "Set up git hooks and skills"
   },
   "peerDependencies": {
-    "electron": ">=20",
+    "electron": ">=25",
     "electron-builder": ">=24",
     "electron-updater": ">=6"
   },
