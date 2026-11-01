@@ -14,6 +14,9 @@ export default defineConfig([
     },
     dts: true,
     publint: true,
+    // Templates and the built-in app icon ship next to the bundled entries.
+    // Out dir is cleaned once per run, so one config is enough.
+    copy: ['src/templates', 'src/assets'],
     plugins: [
       StaleGuardRecorder(),
     ],

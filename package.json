@@ -42,7 +42,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsdown && node scripts/copy-templates.mjs",
+    "build": "tsdown",
     "dev": "tsdown --watch",
     "knip": "knip",
     "lint": "eslint --cache",
