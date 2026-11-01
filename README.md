@@ -1,8 +1,14 @@
-# @uni-helper/desktop
+<img src="./banner.svg" alt="banner" width="100%"/>
 
-[![npm version][npm-version-src]][npm-version-href]
-[![npm downloads][npm-downloads-src]][npm-downloads-href]
-[![License][license-src]][license-href]
+<div style="display: flex; justify-content: center; align-items: center; gap: 8px;">
+  <a href="https://github.com/uni-helper/desktop/stargazers"><img src="https://img.shields.io/github/stars/uni-helper/desktop?colorA=005947&colorB=eee&style=for-the-badge" alt="stars"></a>
+  <a href="https://www.npmjs.com/package/@uni-helper/desktop"><img src="https://img.shields.io/npm/dm/@uni-helper/desktop?colorA=005947&colorB=eee&style=for-the-badge" alt="downloads"></a>
+  <a href="https://www.npmjs.com/package/@uni-helper/desktop"><img src="https://img.shields.io/npm/v/@uni-helper/desktop?colorA=005947&colorB=eee&style=for-the-badge" alt="npm"></a>
+</div>
+
+<div style="display: flex; justify-content: center; align-items: center; gap: 8px;">
+  <a href="https://deepwiki.com/uni-helper/desktop"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
+</div>
 
 让 uni-app（Vue3 + Vite CLI 工程）获得打包成 Electron 桌面应用的能力：桌面端是 uni 的一个自定义平台，`uni dev -p desktop` 直接打开 Electron 窗口、`uni build -p desktop` 直接产出安装包；外加一层 uni API 桌面垫片，用户代码保持标准 `uni.xxx` 写法、跨端零改动。
 
@@ -322,11 +328,16 @@ createDesktopApp(__DESKTOP_CONFIG__)
 
 ## License
 
-[MIT](./LICENSE.md) License © [FliPPeDround](https://github.com/flippedround)
+[MIT](./LICENSE.md) License © [uni-helper](https://github.com/uni-helper)
 
-[npm-version-src]: https://img.shields.io/npm/v/@uni-helper/desktop?style=flat-square
-[npm-version-href]: https://npmjs.com/package/@uni-helper/desktop
-[npm-downloads-src]: https://img.shields.io/npm/dm/@uni-helper/desktop?style=flat-square
-[npm-downloads-href]: https://npmjs.com/package/@uni-helper/desktop
-[license-src]: https://img.shields.io/github/license/uni-helper/desktop.svg?style=flat-square
-[license-href]: https://github.com/uni-helper/desktop/blob/main/LICENSE.md
+## 赞助
+
+如果你觉得这个项目对你的跨端开发有所帮助，欢迎支持作者持续维护：
+
+<p align="center">
+  <a href="https://afdian.com/a/flippedround">
+    <img alt="sponsors" src="https://cdn.jsdelivr.net/gh/FliPPeDround/sponsors/sponsorkit/sponsors.svg" />
+  </a>
+</p>
+
+---
