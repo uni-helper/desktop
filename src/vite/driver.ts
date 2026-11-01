@@ -72,6 +72,7 @@ export async function startDesktopDevRuntime(resolved: ResolvedConfig, url: stri
   // and the first spawn, and must then be a no-op instead of a second spawn.
   let electronProcess: ChildProcess | undefined
   let electronStarted = false
+  let closed = false
   const spawnElectron = (): void => {
     electronProcess = spawn(launchBinary, [join(electronDir, MAIN_BUNDLE_FILE)], {
       cwd: root,
@@ -90,11 +91,31 @@ export async function startDesktopDevRuntime(resolved: ResolvedConfig, url: stri
       logger.error(`failed to start electron: ${error.message}`)
     })
   }
-  async function restartElectron(): Promise<void> {
-    if (!electronStarted)
+  // Serialized restarts: a burst of rebuilds must kill-then-spawn exactly once
+  // (the spawned child always reads the freshly written main.cjs), a rebuild
+  // landing mid-kill still gets its own restart, and nothing may spawn after
+  // close().
+  const idle: Promise<void> = Promise.resolve()
+  let restarting: Promise<void> = idle
+  let restartQueued = false
+  const restartElectron = (): void => {
+    if (closed || !electronStarted)
       return
-    await killTree(electronProcess)
-    spawnElectron()
+    restartQueued = true
+    if (restarting !== idle)
+      return
+    restarting = restarting.then(async () => {
+      while (restartQueued) {
+        restartQueued = false
+        if (closed)
+          return
+        await killTree(electronProcess)
+        if (!closed)
+          spawnElectron()
+      }
+    }).finally(() => {
+      restarting = idle
+    })
   }
 
   const watcher = await bundleEntry({
@@ -102,18 +123,19 @@ export async function startDesktopDevRuntime(resolved: ResolvedConfig, url: stri
     outDir: electronDir,
     baked,
     watch: true,
-    onRebuild: () => void restartElectron(),
+    onRebuild: restartElectron,
   })
   await bundlePreload({ outDir: electronDir, templateDir })
   spawnElectron()
 
-  let closed = false
   return {
     async close() {
       if (closed)
         return
       closed = true
-      await Promise.all([killTree(electronProcess), watcher?.dispose()])
+      // `restarting` covers an in-flight kill; the final killTree still kills a
+      // process that never went through a rebuild.
+      await Promise.all([restarting, killTree(electronProcess), watcher?.dispose()])
     },
   }
 }
