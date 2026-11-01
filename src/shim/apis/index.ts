@@ -8,3 +8,4 @@
  */
 export { createOpenDocument } from './open-document'
 export { getSavedFileInfo, getSavedFileList, removeSavedFile, saveFile } from './saved-file'
+export { desktopWindow } from './window-controls'

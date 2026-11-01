@@ -34,7 +34,13 @@ vi.mock('electron', async () => {
     focus = vi.fn()
     show = vi.fn()
     restore = vi.fn()
+    hide = vi.fn()
+    minimize = vi.fn()
+    maximize = vi.fn()
+    unmaximize = vi.fn()
     isMinimized = vi.fn(() => false)
+    isMaximized = vi.fn(() => false)
+    close = vi.fn()
     constructor(options: Record<string, any>) {
       super()
       state.windowOptions = options
@@ -408,6 +414,37 @@ describe('navigation hardening', () => {
       nodeIntegration: false,
     })
     expect(state.window.loadFile).toHaveBeenCalledWith(join(runtimeDir, '..', 'web', 'index.html'))
+  })
+})
+
+describe('window control handlers', () => {
+  it('minimize, toggleMaximize and close drive the main window', async () => {
+    await boot()
+
+    await state.ipcHandlers.get('desktop:window:minimize')!({})
+    expect(state.window.minimize).toHaveBeenCalled()
+
+    const toggle = state.ipcHandlers.get('desktop:window:toggleMaximize')!
+    await toggle({})
+    expect(state.window.maximize).toHaveBeenCalled()
+
+    state.window.isMaximized.mockReturnValue(true)
+    await toggle({})
+    expect(state.window.unmaximize).toHaveBeenCalled()
+
+    await state.ipcHandlers.get('desktop:window:close')!({})
+    expect(state.window.close).toHaveBeenCalled()
+  })
+
+  it('window control handlers no-op without a window', async () => {
+    await boot()
+    state.window.emit('closed')
+    state.window = undefined
+
+    // The handlers are synchronous no-ops; ipcMain wraps their return value.
+    expect(() => state.ipcHandlers.get('desktop:window:minimize')!({})).not.toThrow()
+    expect(() => state.ipcHandlers.get('desktop:window:toggleMaximize')!({})).not.toThrow()
+    expect(() => state.ipcHandlers.get('desktop:window:close')!({})).not.toThrow()
   })
 })
 

@@ -9,7 +9,7 @@ import { createConsola } from 'consola/basic'
 import { app, BrowserWindow, ipcMain, Menu, protocol, shell, Tray } from 'electron'
 import { APP_RESOURCES_DIR, APP_WEB_DIR, PRELOAD_BUNDLE_FILE } from '../shared/paths'
 import { DESKTOP_FILE_SCHEME, EXTENSION_BY_MIME, mimeFromExtension, parseDesktopFileUrl, toDesktopFileUrl } from '../shared/protocol'
-import { shimChannels } from '../shim/channels'
+import { shimChannels, windowChannels } from '../shim/channels'
 
 export type { BakedDesktopConfig } from '../baked'
 export { DESKTOP_FILE_SCHEME, parseDesktopFileUrl, toDesktopFileUrl }
@@ -189,6 +189,24 @@ function registerIpcHandlers(): void {
     if (errorMessage)
       throw new Error(errorMessage)
     return {}
+  })
+
+  // Frameless / custom-titlebar windows need the renderer to drive the window
+  // itself; handlers act on the main window and no-op silently without one.
+  ipcMain.handle(windowChannels.minimize, () => {
+    getMainWindow()?.minimize()
+  })
+  ipcMain.handle(windowChannels.toggleMaximize, () => {
+    const window = getMainWindow()
+    if (!window)
+      return
+    if (window.isMaximized())
+      window.unmaximize()
+    else
+      window.maximize()
+  })
+  ipcMain.handle(windowChannels.close, () => {
+    getMainWindow()?.close()
   })
 }
 

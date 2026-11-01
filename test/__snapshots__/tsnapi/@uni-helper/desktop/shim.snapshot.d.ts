@@ -3,6 +3,7 @@
  */
 // #region Types
 export type ShimChannel = (typeof shimChannels)[keyof typeof shimChannels];
+export type WindowChannel = (typeof windowChannels)[keyof typeof windowChannels];
 // #endregion
 
 // #region Functions
@@ -10,7 +11,7 @@ export declare function installDesktopShim(): void;
 // #endregion
 
 // #region Variables
-export declare const allShimChannels: ShimChannel[];
+export declare const allShimChannels: (ShimChannel | WindowChannel)[];
 export declare const shimChannels: {
   readonly saveFile: "desktop:uni:saveFile";
   readonly getSavedFileList: "desktop:uni:getSavedFileList";
@@ -18,4 +19,13 @@ export declare const shimChannels: {
   readonly removeSavedFile: "desktop:uni:removeSavedFile";
   readonly openDocument: "desktop:uni:openDocument";
 };
+export declare const windowChannels: {
+  readonly minimize: "desktop:window:minimize";
+  readonly toggleMaximize: "desktop:window:toggleMaximize";
+  readonly close: "desktop:window:close";
+};
+// #endregion
+
+// #region Other
+export { desktopWindow }
 // #endregion

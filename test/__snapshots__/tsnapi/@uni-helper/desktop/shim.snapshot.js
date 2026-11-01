@@ -8,4 +8,9 @@ export function installDesktopShim() {}
 // #region Variables
 export var allShimChannels /* const */
 export var shimChannels /* const */
+export var windowChannels /* const */
+// #endregion
+
+// #region Other
+export { desktopWindow }
 // #endregion

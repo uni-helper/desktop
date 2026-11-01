@@ -26,3 +26,7 @@ interface UniOptions {
   [key: string]: unknown;
 }
 // #endregion
+
+// #region Other
+export { desktopWindow }
+// #endregion

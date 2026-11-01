@@ -14,4 +14,21 @@ export const shimChannels = {
 
 export type ShimChannel = (typeof shimChannels)[keyof typeof shimChannels]
 
-export const allShimChannels: ShimChannel[] = Object.values(shimChannels)
+/**
+ * Window-control channels for frameless / custom-titlebar windows. Deliberately
+ * separate from `shimChannels`: the vite plugin derives the uni-h5 wrapper
+ * exports from those keys, and window controls are not uni APIs.
+ */
+export const windowChannels = {
+  minimize: 'desktop:window:minimize',
+  toggleMaximize: 'desktop:window:toggleMaximize',
+  close: 'desktop:window:close',
+} as const
+
+export type WindowChannel = (typeof windowChannels)[keyof typeof windowChannels]
+
+/** The preload's deny-by-default invoke allowlist: every channel the shim may call. */
+export const allShimChannels: (ShimChannel | WindowChannel)[] = [
+  ...Object.values(shimChannels),
+  ...Object.values(windowChannels),
+]

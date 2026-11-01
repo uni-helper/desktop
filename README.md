@@ -198,6 +198,8 @@ console.log('非桌面端执行（纯浏览器打开时）')
 </button>
 <!-- #endif -->
 
+<!-- handler 里用窗口控制桥实现：`import { desktopWindow } from '@uni-helper/desktop/shim'` 后调用 `desktopWindow.minimize()` -->
+
 <style>
 /* css 中必须用块注释 */
 /* #ifdef DESKTOP */
@@ -233,6 +235,22 @@ pages.json / manifest.json 中同样支持（`// #ifdef DESKTOP` 包裹节点，
 | `uni.openDocument` | `window.open(filePath)` | **唯一例外**：`desktop-file://` 路径交给系统默认程序打开，其余路径仍走 H5 原版 |
 
 `uni.setClipboardData`、`uni.getClipboardData`、`uni.chooseImage`、`uni.chooseVideo`、`uni.chooseFile` 等 H5 已实现的 API 不会被改写，行为与 H5 一致。
+
+### 窗口控制
+
+`frame: false` / `titleBarStyle: 'hidden'` 的无边框窗口，可用窗口控制桥驱动：
+
+```ts
+// #ifdef DESKTOP
+import { desktopWindow } from '@uni-helper/desktop/shim'
+
+desktopWindow.minimize()
+desktopWindow.toggleMaximize()
+desktopWindow.close()
+// #endif
+```
+
+纯浏览器环境整体 no-op。
 
 ### 文件路径
 
