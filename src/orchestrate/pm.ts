@@ -47,12 +47,24 @@ export function addCommand(pm: PackageManager, packages: string[]): { cmd: strin
   }
 }
 
+/**
+ * cmd.exe (Node's `shell: true` on Windows) joins the command and arguments
+ * with raw spaces, so any argument containing whitespace must carry its own
+ * quotes. Doubling embedded quotes is cmd.exe's own escaping for `""` inside
+ * a quoted string.
+ */
+export function quoteWindowsArg(arg: string): string {
+  return /[\s"]/.test(arg) ? `"${arg.replace(/"/g, '""')}"` : arg
+}
+
 export function spawnAwait(cmd: string, args: string[], options: { cwd: string }): Promise<void> {
+  const windowsShell = process.platform === 'win32'
+  const effectiveArgs = windowsShell ? args.map(quoteWindowsArg) : args
   return new Promise((resolvePromise, rejectPromise) => {
-    const child = spawn(cmd, args, {
+    const child = spawn(cmd, effectiveArgs, {
       cwd: options.cwd,
       stdio: 'inherit',
-      shell: process.platform === 'win32',
+      shell: windowsShell,
     })
     child.once('error', (error) => {
       rejectPromise(new DesktopError(`failed to run \`${cmd} ${args.join(' ')}\`: ${error.message}`))

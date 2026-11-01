@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { addCommand, detectPackageManager } from '../src/orchestrate/pm'
+import { addCommand, detectPackageManager, quoteWindowsArg } from '../src/orchestrate/pm'
 
 const tempDirs: string[] = []
 
@@ -40,5 +40,18 @@ describe('addCommand', () => {
     expect(addCommand('npm', ['electron'])).toEqual({ cmd: 'npm', args: ['install', '--save-dev', 'electron'] })
     expect(addCommand('yarn', ['a', 'b'])).toEqual({ cmd: 'yarn', args: ['add', '-D', 'a', 'b'] })
     expect(addCommand('bun', ['electron'])).toEqual({ cmd: 'bun', args: ['add', '-d', 'electron'] })
+  })
+})
+
+describe('quoteWindowsArg', () => {
+  it.each([
+    ['plain', 'plain'],
+    ['C:\\Program Files\\nodejs\\node.exe', '"C:\\Program Files\\nodejs\\node.exe"'],
+    ['--config', '--config'],
+    ['D:\\my app\\dist\\electron-builder.json', '"D:\\my app\\dist\\electron-builder.json"'],
+    ['has"quote', '"has""quote"'],
+    ['nospace"q x', '"nospace""q x"'],
+  ])('quotes %j → %j', (input, expected) => {
+    expect(quoteWindowsArg(input)).toBe(expected)
   })
 })
