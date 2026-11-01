@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it, vi } from 'vitest'
 import { logger } from '../src/log'
-import { ensureDesktopProject } from '../src/vite/setup'
+import { ensureDesktopProject, ensureDesktopUniScript } from '../src/vite/setup'
 
 const tempDirs: string[] = []
 const packageRoot = fileURLToPath(new URL('..', import.meta.url))
@@ -164,6 +164,49 @@ describe('ensureDesktopProject', () => {
     expect(await readFile(join(root, 'src/manifest.json'), 'utf8')).toBe(manifest)
     const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
     expect(pkg.scripts['dev:desktop']).toBe('uni -p desktop')
+  })
+
+  it('creates the missing desktop uni script entry', async () => {
+    const root = await createProject({
+      'package.json': JSON.stringify({ name: 'setup-test', scripts: {} }),
+    })
+
+    ensureDesktopUniScript(root)
+
+    const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
+    expect(pkg['uni-app'].scripts.desktop).toEqual({
+      title: 'Desktop',
+      env: { UNI_PLATFORM: 'h5' },
+      define: { DESKTOP: true, H5: false, WEB: false },
+    })
+    const entries = await readdir(root)
+    expect(entries.filter(name => name.includes('uni-desktop-tmp'))).toEqual([])
+  })
+
+  it('leaves an existing desktop uni script entry untouched', async () => {
+    const root = await createProject(baseProject())
+    const before = await readFile(join(root, 'package.json'), 'utf8')
+
+    ensureDesktopUniScript(root)
+
+    expect(await readFile(join(root, 'package.json'), 'utf8')).toBe(before)
+  })
+
+  it('rejects a direct run whose desktop entry is unusable (guard unchanged)', async () => {
+    const root = await createProject({
+      'package.json': JSON.stringify({
+        'name': 'setup-test',
+        'uni-app': {
+          scripts: {
+            desktop: { env: { UNI_PLATFORM: 'mp-weixin' } },
+          },
+        },
+      }),
+    })
+
+    await expect(ensureDesktopProject(root, { interactive: false }))
+      .rejects
+      .toThrow('UNI_PLATFORM')
   })
 
   it('leaves no temp files behind after rewriting', async () => {

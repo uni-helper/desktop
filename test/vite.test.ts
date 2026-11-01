@@ -2,7 +2,6 @@ import type { Plugin } from 'vite'
 import { EventEmitter } from 'node:events'
 import process from 'node:process'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { desktopScriptSnippet } from '../src/shared/scripts'
 import { isDesktopBuild } from '../src/vite/driver'
 import { uniDesktop } from '../src/vite/index'
 
@@ -23,12 +22,14 @@ const resolved = {
 
 const mocks = vi.hoisted(() => ({
   ensureDesktopProject: vi.fn(),
+  ensureDesktopUniScript: vi.fn(),
   startDesktopDevRuntime: vi.fn(),
   assembleDesktopApp: vi.fn(),
 }))
 
 vi.mock('../src/vite/setup', () => ({
   ensureDesktopProject: mocks.ensureDesktopProject,
+  ensureDesktopUniScript: mocks.ensureDesktopUniScript,
 }))
 
 vi.mock('../src/vite/driver', async importOriginal => ({
@@ -197,12 +198,13 @@ describe('isDesktopBuild', () => {
 })
 
 describe('desktop platform detection in configResolved', () => {
-  it('rejects `-p desktop` without the uni-app.scripts entry', () => {
+  it('creates the missing uni-app.scripts entry and asks for a re-run', () => {
     const instance = plugin()
     process.env.UNI_PLATFORM = 'desktop'
 
     expect(() => hook(instance.configResolved!).call({} as any, fakeViteConfig()))
-      .toThrow(desktopScriptSnippet())
+      .toThrow('Re-run the command to apply it')
+    expect(mocks.ensureDesktopUniScript).toHaveBeenCalledWith('/project')
   })
 
   it('accepts a resolved desktop platform build', () => {

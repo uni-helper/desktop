@@ -1,5 +1,5 @@
 import type { ResolveResult } from '../config/resolve'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { readFile, rename, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import process from 'node:process'
@@ -9,7 +9,7 @@ import { DesktopError } from '../error'
 import { logger } from '../log'
 import { addCommand, detectPackageManager, spawnAwait } from '../orchestrate/pm'
 import { parseManifest } from '../shared/manifest'
-import { DESKTOP_SCRIPT_NAME } from '../shared/scripts'
+import { DESKTOP_SCRIPT_NAME, DESKTOP_UNI_SCRIPT } from '../shared/scripts'
 
 /** npm scripts that run the desktop platform through uni's own CLI. */
 const DESKTOP_SCRIPTS: Record<string, string> = {
@@ -77,6 +77,28 @@ async function writeFileAtomic(filePath: string, content: string): Promise<void>
   const tempPath = `${filePath}.uni-desktop-tmp`
   await writeFile(tempPath, content)
   await rename(tempPath, filePath)
+}
+
+/**
+ * Create the missing `uni-app.scripts.desktop` custom platform entry so the
+ * first `uni -p desktop` does not dead-end on a hand-pasted JSON block. Called
+ * from the sync `configResolved` hook, hence the sync fs calls. A
+ * user-maintained entry is never rewritten here: wrong `env`/`define` keep
+ * their explicit errors from `checkDesktopUniScript`.
+ */
+export function ensureDesktopUniScript(root: string): void {
+  const pkgPath = join(root, 'package.json')
+  const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as ProjectPackage
+  if (pkg['uni-app']?.scripts?.[DESKTOP_SCRIPT_NAME])
+    return
+  pkg['uni-app'] ??= {}
+  pkg['uni-app'].scripts ??= {}
+  pkg['uni-app'].scripts[DESKTOP_SCRIPT_NAME] = DESKTOP_UNI_SCRIPT
+  // Atomic write like the async self-check rewrites: a torn package.json is fatal.
+  const tempPath = `${pkgPath}.uni-desktop-tmp`
+  writeFileSync(tempPath, `${JSON.stringify(pkg, null, 2)}\n`)
+  renameSync(tempPath, pkgPath)
+  logger.success('added uni-app.scripts.desktop to package.json; re-run the command to apply it')
 }
 
 /** npm scripts are pure conveniences: add the ones that are missing, quietly. */

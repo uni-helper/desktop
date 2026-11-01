@@ -10,7 +10,7 @@
 
 - **真平台体验**：`uni dev -p desktop` 在 dev server 就绪后自动打开 Electron 窗口（Vite 热更新、主进程改动自动重启）；`uni build -p desktop` 组装 `dist/build/desktop` 并用 electron-builder 生成 Windows（NSIS）/ macOS（dmg）/ Linux（AppImage）安装包
 - **自定义条件编译平台**：`#ifdef DESKTOP` 覆盖 js/模板/css/pages.json/manifest.json，`#ifdef H5` 只代表浏览器构建
-- **启动自检**：首次运行自动补齐 manifest.json 路由规范、垫片导入、`unh.config.ts`、npm scripts，缺依赖时交互式安装（TTY 下逐项确认，CI 自动应用安全项）
+- **启动自检**：首次运行自动补齐平台声明、manifest.json 路由规范、垫片导入、`unh.config.ts`、npm scripts，缺依赖时交互式安装（TTY 下逐项确认，CI 自动应用安全项）
 - **uni API 垫片**：只补 H5 端没有实现的内置 API（`uni.saveFile` / `getSavedFileList` / `getSavedFileInfo` / `removeSavedFile`），外加 `openDocument` 对 `desktop-file://` 的桥接；H5 已实现的 API 一律沿用 uni-h5 原版，纯浏览器环境整体 no-op
 - **SDK 配置**：所有窗口、托盘、更新、打包选项集中在 `unh.config.ts` 的 `desktop` 键下，未覆盖的值回退到 `manifest.json`
 - **零 CLI**：没有 `uni-desktop` 命令，唯一接线是一个 vite 插件，其余全部通过 uni 自己的平台机制驱动
@@ -27,7 +27,7 @@ pnpm add -D @uni-helper/desktop electron electron-builder electron-updater
 
 要求 Electron ≥ 25（运行时用到 `protocol.handle` 与内置 Node 18 的全局 `Request`/`Response`）。
 
-做两处接线。其一，在 package.json 声明桌面平台（uni 官方的自定义条件编译平台，缺少它时运行会得到明确报错与可粘贴片段，见[条件编译](#条件编译)）：
+做两处接线。其一，在 package.json 声明桌面平台（uni 官方的自定义条件编译平台，缺少它时运行会得到明确报错与可粘贴片段，见[条件编译](#条件编译)；该声明缺失时，首次运行会自动写入 package.json 并提示重新运行，也可手动粘贴）：
 
 ```json
 {

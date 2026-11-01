@@ -5,10 +5,9 @@ import { resolve } from 'node:path'
 import process from 'node:process'
 import { DesktopError } from '../error'
 import { logger } from '../log'
-import { desktopScriptSnippet } from '../shared/scripts'
 import { shimChannels } from '../shim/channels'
 import { assembleDesktopApp, isDesktopBuild, startDesktopDevRuntime } from './driver'
-import { ensureDesktopProject } from './setup'
+import { ensureDesktopProject, ensureDesktopUniScript } from './setup'
 
 /** The module whose API exports the desktop shim must override. */
 const UNI_H5_ID = '@dcloudio/uni-h5'
@@ -143,11 +142,13 @@ export function uniDesktop(): Plugin {
       desktop = isDesktopBuild()
       // `-p desktop` without a matching `uni-app.scripts.desktop` entry leaves
       // UNI_PLATFORM as the raw name and fails inside uni with a confusing
-      // error; surface the missing piece instead.
+      // error; create the missing entry (the one wiring the self-check refuses
+      // to leave missing) and ask for a re-run, since this process already
+      // resolved UNI_PLATFORM wrong.
       if (process.env.UNI_PLATFORM === 'desktop') {
+        ensureDesktopUniScript(root)
         throw new DesktopError(
-          `\`uni -p desktop\` needs the \`uni-app.scripts.desktop\` custom platform in package.json:\n\n${
-            desktopScriptSnippet()}`,
+          `\`uni -p desktop\` needs the \`uni-app.scripts.desktop\` custom platform, which was just added to package.json.\nRe-run the command to apply it.`,
         )
       }
     },
