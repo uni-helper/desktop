@@ -1,5 +1,5 @@
 import type { UniOptions } from '../types'
-import { getBridge } from '../bridge'
+import { getBridgeOrThrow } from '../bridge'
 import { shimChannels } from '../channels'
 import { invokeUniApi } from '../result'
 
@@ -34,11 +34,8 @@ export function saveFile(options: UniOptions = {}): Promise<{ savedFilePath: str
     async () => {
       if (typeof options.tempFilePath !== 'string')
         throw new Error('tempFilePath is required')
-      const bridge = getBridge()
-      if (!bridge)
-        throw new Error('desktop bridge unavailable; run inside the uni-desktop shell')
       const { bytes, mime } = await readAsBytes(options.tempFilePath)
-      return await bridge.invoke(shimChannels.saveFile, { bytes, mime }) as { savedFilePath: string }
+      return await getBridgeOrThrow().invoke(shimChannels.saveFile, { bytes, mime }) as { savedFilePath: string }
     },
   )
 }
@@ -49,10 +46,7 @@ export function getSavedFileList(options: UniOptions = {}): Promise<{ fileList: 
     'getSavedFileList',
     options,
     async () => {
-      const bridge = getBridge()
-      if (!bridge)
-        throw new Error('desktop bridge unavailable; run inside the uni-desktop shell')
-      return await bridge.invoke(shimChannels.getSavedFileList) as { fileList: any[] }
+      return await getBridgeOrThrow().invoke(shimChannels.getSavedFileList) as { fileList: any[] }
     },
   )
 }
@@ -65,10 +59,7 @@ export function getSavedFileInfo(options: UniOptions = {}): Promise<{ size: numb
     async () => {
       if (typeof options.filePath !== 'string')
         throw new Error('filePath is required')
-      const bridge = getBridge()
-      if (!bridge)
-        throw new Error('desktop bridge unavailable; run inside the uni-desktop shell')
-      return await bridge.invoke(shimChannels.getSavedFileInfo, { filePath: options.filePath }) as { size: number, createTime: number }
+      return await getBridgeOrThrow().invoke(shimChannels.getSavedFileInfo, { filePath: options.filePath }) as { size: number, createTime: number }
     },
   )
 }
@@ -81,10 +72,7 @@ export function removeSavedFile(options: UniOptions = {}): Promise<{ errMsg: str
     async () => {
       if (typeof options.filePath !== 'string')
         throw new Error('filePath is required')
-      const bridge = getBridge()
-      if (!bridge)
-        throw new Error('desktop bridge unavailable; run inside the uni-desktop shell')
-      await bridge.invoke(shimChannels.removeSavedFile, { filePath: options.filePath })
+      await getBridgeOrThrow().invoke(shimChannels.removeSavedFile, { filePath: options.filePath })
       return {}
     },
   )

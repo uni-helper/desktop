@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 function createBridge(): DesktopBridge & { invoke: ReturnType<typeof vi.fn> } {
   return {
     invoke: vi.fn(async () => ({})),
-    on: vi.fn(() => () => {}),
   } as any
 }
 

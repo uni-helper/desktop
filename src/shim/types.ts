@@ -1,6 +1,5 @@
 export interface DesktopBridge {
   invoke: (channel: string, payload?: unknown) => Promise<unknown>
-  on: (channel: string, listener: (payload: any) => void) => () => void
 }
 
 export interface UniResult {

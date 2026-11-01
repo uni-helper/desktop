@@ -5,6 +5,10 @@
 export type ShimChannel = (typeof shimChannels)[keyof typeof shimChannels];
 // #endregion
 
+// #region Functions
+export declare function installDesktopShim(): void;
+// #endregion
+
 // #region Variables
 export declare const allShimChannels: ShimChannel[];
 export declare const shimChannels: {

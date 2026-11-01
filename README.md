@@ -216,7 +216,9 @@ pages.json / manifest.json 中同样支持（`// #ifdef DESKTOP` 包裹节点，
 
 原则：**uni-h5 已经实现的 API 一律沿用原版**，桌面端与 H5 行为完全一致；只有 H5 端没有实现的 API 才由垫片桥接到 Electron 主进程。
 
-垫片在两条路径上生效，全部由 `uniDesktop` 插件注入，无需在业务代码里导入：dev server 下 uni 运行时把 API 对象填进全局 `uni`，插件注入页面的垫片模块就地打补丁（dev 经 `transformIndexHtml` 注入虚拟模块，build 经注入的独立 chunk）；编译产物里 `uni.xxx` 调用被 uni 重写为 `@dcloudio/uni-h5` 的具名导入，由插件在模块层替换导出。两条路径缺一不可。
+垫片在两条路径上生效，共用同一份实现，全部由 `uniDesktop` 插件注入，无需在业务代码里导入：编译产物里 `uni.xxx` 调用被 uni 重写为 `@dcloudio/uni-h5` 的具名导入，由插件生成的 uni-h5 wrapper 模块替换导出；dev server 下 uni 运行时把 API 对象填进全局 `uni`（build 摇树时 uni 会把它替换成空对象），wrapper 求值时会装好 `window.uni` 赋值拦截器，任何后续赋值都会被就地打补丁。两条路径缺一不可。
+
+注意：dev 下 `window.wx` 与 `window.uni` 是同一个对象，会一并获得桌面实现；build 摇树后 uni 将 `window.wx` 置为空对象且垫片不做补丁，桌面构建请使用 `uni.*`。
 
 | API | H5 端状态 | 桌面端行为 |
 | --- | --- | --- |

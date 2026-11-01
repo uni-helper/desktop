@@ -10,7 +10,6 @@ function createBridge(responders: Record<string, (payload: any) => any> = {}): D
       const respond = responders[channel]
       return respond ? await respond(payload) : {}
     }),
-    on: vi.fn(() => () => {}),
   }
   window.__UNI_DESKTOP_BRIDGE__ = bridge
   return bridge

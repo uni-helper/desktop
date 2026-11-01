@@ -1,5 +1,5 @@
 import type { UniOptions } from '../types'
-import { getBridge } from '../bridge'
+import { getBridgeOrThrow } from '../bridge'
 import { shimChannels } from '../channels'
 import { invokeUniApi } from '../result'
 
@@ -20,10 +20,7 @@ export function createOpenDocument(
     const filePath = options.filePath
     if (typeof filePath === 'string' && filePath.startsWith(DESKTOP_FILE_PREFIX)) {
       return invokeUniApi('openDocument', options, async () => {
-        const bridge = getBridge()
-        if (!bridge)
-          throw new Error('desktop bridge unavailable; run inside the uni-desktop shell')
-        await bridge.invoke(shimChannels.openDocument, { filePath, fileType: options.fileType })
+        await getBridgeOrThrow().invoke(shimChannels.openDocument, { filePath, fileType: options.fileType })
         return {}
       })
     }

@@ -21,9 +21,6 @@
     "shim",
     "uni-helper"
   ],
-  "sideEffects": [
-    "./dist/shim/index.mjs"
-  ],
   "exports": {
     ".": "./dist/index.mjs",
     "./main": "./dist/runtime/index.mjs",

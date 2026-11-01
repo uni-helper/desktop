@@ -96,6 +96,19 @@ afterEach(() => {
 })
 
 describe('uniDesktop vite plugin', () => {
+  it('keeps its own shim modules out of vite dep pre-bundling', () => {
+    const instance = plugin()
+
+    // A workspace-linked SDK rebuild does not change the optimizeDeps hash,
+    // so a pre-bundled shim entry would keep missing new exports until the
+    // cache is deleted. Excluded ESM deps are served as source instead.
+    const config = hook(instance.config!).call({} as any, {} as any, {} as any)
+
+    expect(config).toEqual({
+      optimizeDeps: { exclude: ['@uni-helper/desktop/shim', '@uni-helper/desktop/shim/apis'] },
+    })
+  })
+
   it('orders its resolver ahead of uni\'s own pre-group resolver', () => {
     const instance = plugin()
 
@@ -131,7 +144,7 @@ describe('uniDesktop vite plugin', () => {
     expect(await resolveId(instance, {}, 'vue', '/src/main.ts', {})).toBeUndefined()
   })
 
-  it('generates a wrapper that keeps uni-h5 exports and overrides the desktop APIs', () => {
+  it('generates a wrapper that keeps uni-h5 exports, overrides the desktop APIs and installs the shim', () => {
     const instance = plugin()
 
     const loaded = load(instance, '\0uni-desktop/uni-h5')
@@ -141,24 +154,19 @@ describe('uniDesktop vite plugin', () => {
     expect(code).toContain(`export * from '${UNI_H5_ID}'`)
     expect(code).toContain('\'@uni-helper/desktop/shim/apis\'')
     expect(code).toContain('createOpenDocument')
-    // The desktop implementations replace uni-h5's own exports.
+    // The desktop implementations replace uni-h5's own exports. The saved-file
+    // names are derived from the shim channel list.
     expect(code).toContain('export const openDocument = createOpenDocument(openDocumentH5)')
-    expect(code).toContain('export { getSavedFileInfo, getSavedFileList, removeSavedFile, saveFile }')
+    expect(code).toContain('export { saveFile, getSavedFileList, getSavedFileInfo, removeSavedFile } from \'@uni-helper/desktop/shim/apis\'')
+    // The wrapper installs the runtime shim itself: it evaluates before uni
+    // assigns the global `uni` in both dev and tree-shaken builds.
+    expect(code).toContain('installDesktopShim()')
   })
 
   it('does not load other modules', () => {
     const instance = plugin()
 
     expect(load(instance, '/src/main.ts')).toBeUndefined()
-  })
-
-  it('serves the shim installer virtual module as a side-effect import', async () => {
-    const instance = plugin()
-
-    expect(await resolveId(instance, {}, '\0uni-desktop/shim-install', undefined, {})).toBe('\0uni-desktop/shim-install')
-    const loaded = load(instance, '\0uni-desktop/shim-install')
-    const code = typeof loaded === 'string' ? loaded : loaded.code
-    expect(code).toContain('import \'@uni-helper/desktop/shim\'')
   })
 })
 
@@ -261,16 +269,14 @@ describe('desktop dev: configureServer drives the shell', () => {
 })
 
 describe('desktop build: buildStart checks, closeBundle assembles', () => {
-  it('checks the project, emits the shim chunk and assembles the app after the build', async () => {
+  it('checks the project and assembles the app after the build', async () => {
     const instance = plugin()
     process.env.UNI_PLATFORM = 'h5'
     process.env.UNI_CUSTOM_CONTEXT = JSON.stringify({ DESKTOP: true })
     hook(instance.configResolved!).call({} as any, fakeViteConfig())
 
-    const emitFile = vi.fn()
-    await hook(instance.buildStart!).call({ emitFile } as any, {} as any)
+    await hook(instance.buildStart!).call({} as any, {} as any)
     expect(ensureDesktopProject).toHaveBeenCalledWith('/project')
-    expect(emitFile).toHaveBeenCalledWith({ type: 'chunk', id: '\0uni-desktop/shim-install', fileName: 'uni-desktop-shim.js' })
 
     await hook(instance.closeBundle!).call({} as any)
     expect(assembleDesktopApp).toHaveBeenCalledWith(resolved, '/project/dist/build/h5')
@@ -281,54 +287,10 @@ describe('desktop build: buildStart checks, closeBundle assembles', () => {
     process.env.UNI_PLATFORM = 'h5'
     hook(instance.configResolved!).call({} as any, fakeViteConfig())
 
-    const emitFile = vi.fn()
-    await hook(instance.buildStart!).call({ emitFile } as any, {} as any)
+    await hook(instance.buildStart!).call({} as any, {} as any)
     await hook(instance.closeBundle!).call({} as any)
 
     expect(ensureDesktopProject).not.toHaveBeenCalled()
-    expect(emitFile).not.toHaveBeenCalled()
     expect(assembleDesktopApp).not.toHaveBeenCalled()
-  })
-})
-
-describe('desktop shim injection: transformIndexHtml', () => {
-  it('injects the virtual shim module ahead of the dev page', () => {
-    const instance = plugin()
-    process.env.UNI_PLATFORM = 'h5'
-    process.env.UNI_CUSTOM_CONTEXT = JSON.stringify({ DESKTOP: true })
-    hook(instance.configResolved!).call({} as any, fakeViteConfig('/project', 'serve'))
-
-    const tags = hook(instance.transformIndexHtml!).call({} as any, '<html></html>', {} as any)
-
-    expect(tags).toEqual([{
-      tag: 'script',
-      attrs: { type: 'module', src: '/@id/__x00__uni-desktop/shim-install' },
-      injectTo: 'head-prepend',
-    }])
-  })
-
-  it('injects the emitted shim chunk into the built page', () => {
-    const instance = plugin()
-    process.env.UNI_PLATFORM = 'h5'
-    process.env.UNI_CUSTOM_CONTEXT = JSON.stringify({ DESKTOP: true })
-    hook(instance.configResolved!).call({} as any, fakeViteConfig())
-
-    const tags = hook(instance.transformIndexHtml!).call({} as any, '<html></html>', {} as any)
-
-    // Build tags are injected verbatim after bundling, so the src must be the
-    // deterministic chunk file relative to index.html (uni's h5 base is `./`).
-    expect(tags).toEqual([{
-      tag: 'script',
-      attrs: { type: 'module', src: './uni-desktop-shim.js' },
-      injectTo: 'head-prepend',
-    }])
-  })
-
-  it('leaves non-desktop pages untouched', () => {
-    const instance = plugin()
-    process.env.UNI_PLATFORM = 'h5'
-    hook(instance.configResolved!).call({} as any, fakeViteConfig())
-
-    expect(hook(instance.transformIndexHtml!).call({} as any, '<html></html>', {} as any)).toBeUndefined()
   })
 })
