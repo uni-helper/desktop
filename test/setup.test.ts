@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs'
-import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -164,5 +164,16 @@ describe('ensureDesktopProject', () => {
     expect(await readFile(join(root, 'src/manifest.json'), 'utf8')).toBe(manifest)
     const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
     expect(pkg.scripts['dev:desktop']).toBe('uni -p desktop')
+  })
+
+  it('leaves no temp files behind after rewriting', async () => {
+    const root = await createProject(baseProject({
+      'src/manifest.json': JSON.stringify({ name: 'setup-app', h5: { router: { mode: 'history' } } }),
+    }))
+
+    await ensureDesktopProject(root, { interactive: false })
+
+    const entries = await readdir(root)
+    expect(entries.filter(name => name.includes('uni-desktop-tmp'))).toEqual([])
   })
 })

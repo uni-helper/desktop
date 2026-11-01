@@ -1,6 +1,6 @@
 import type { ResolveResult } from '../config/resolve'
 import { existsSync } from 'node:fs'
-import { readFile, writeFile } from 'node:fs/promises'
+import { readFile, rename, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import process from 'node:process'
 import * as clack from '@clack/prompts'
@@ -68,6 +68,17 @@ function checkDesktopUniScript(pkg: ProjectPackage): void {
     logger.warn(`uni-app.scripts.${DESKTOP_SCRIPT_NAME}.define lacks ${missing.map(key => `"${key}": false`).join(', ')}; without them #ifdef ${missing.join('/#ifdef ')} code is kept in desktop builds`)
 }
 
+/**
+ * User-file writes must be atomic: a torn package.json or manifest.json (crash,
+ * disk-full mid-write) breaks the whole project, while a rename over the target
+ * is all-or-nothing on the same filesystem.
+ */
+async function writeFileAtomic(filePath: string, content: string): Promise<void> {
+  const tempPath = `${filePath}.uni-desktop-tmp`
+  await writeFile(tempPath, content)
+  await rename(tempPath, filePath)
+}
+
 /** npm scripts are pure conveniences: add the ones that are missing, quietly. */
 async function ensureDesktopScripts(root: string, pkg: ProjectPackage): Promise<void> {
   const pkgPath = join(root, 'package.json')
@@ -76,7 +87,7 @@ async function ensureDesktopScripts(root: string, pkg: ProjectPackage): Promise<
     return
   pkg.scripts ??= {}
   for (const [name, command] of missing) pkg.scripts[name] = command
-  await writeFile(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`)
+  await writeFileAtomic(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`)
   logger.success(`added ${missing.map(([name]) => name).join(', ')} to package.json`)
 }
 
@@ -108,7 +119,7 @@ async function ensureManifestRouter(root: string, interactive: boolean): Promise
   // other platforms keep their own data.
   doc.set('*', 'hash', ['h5', 'router', 'mode'])
   doc.set('*', './', ['h5', 'router', 'base'])
-  await writeFile(manifestPath, `${doc.stringify()}\n`)
+  await writeFileAtomic(manifestPath, `${doc.stringify()}\n`)
   logger.success('updated manifest.json (h5.router mode "hash", base "./")')
 }
 
