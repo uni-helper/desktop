@@ -251,14 +251,17 @@ export function bakeConfig(resolved: ResolvedConfig, assets: { icon?: string, tr
 
   return {
     appName: resolved.appName,
-    appId: resolved.appId,
-    version: resolved.version,
     window: resolved.window,
     dev: {
       openDevtools: resolved.dev.openDevtools,
     },
     tray,
-    updater: resolved.updater,
+    updater: resolved.updater
+      ? {
+          autoDownload: resolved.updater.autoDownload,
+          autoInstallOnAppQuit: resolved.updater.autoInstallOnAppQuit,
+        }
+      : false,
     icon: assets.icon,
   }
 }

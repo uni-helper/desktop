@@ -4,8 +4,6 @@
 // #region Interfaces
 export interface BakedDesktopConfig {
   appName: string;
-  appId: string;
-  version: string;
   window: ResolvedWindowConfig;
   dev: {
     openDevtools: boolean;
@@ -15,7 +13,10 @@ export interface BakedDesktopConfig {
     tooltip?: string;
     menu?: DesktopTrayMenuItem[];
   } | false;
-  updater: DesktopUpdaterConfig | false;
+  updater: {
+    autoDownload?: boolean;
+    autoInstallOnAppQuit?: boolean;
+  } | false;
   icon?: string;
 }
 export interface DesktopAppConfig {

@@ -14,8 +14,6 @@ const shimChannelsSource = fileURLToPath(new URL('../src/shim/channels.ts', impo
 
 const baked: BakedDesktopConfig = {
   appName: 'bake-test-app',
-  appId: 'desktop.uniapp.bake-test-app',
-  version: '1.0.0',
   window: {
     title: 'Bake Test',
     width: 420,
@@ -55,7 +53,6 @@ describe('bundleEntry', () => {
     const output = await readFile(join(outDir, 'main.cjs'), 'utf8')
     expect(output).toContain('BrowserWindow')
     expect(output).toContain('bake-test-app')
-    expect(output).toContain('desktop.uniapp.bake-test-app')
     expect(output).not.toContain('__DESKTOP_CONFIG__)')
   })
 

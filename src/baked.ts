@@ -1,4 +1,4 @@
-import type { DesktopTrayMenuItem, DesktopUpdaterConfig, ResolvedWindowConfig } from './types'
+import type { DesktopTrayMenuItem, ResolvedWindowConfig } from './types'
 
 /**
  * Serializable config baked into the bundled main process through the
@@ -10,8 +10,6 @@ import type { DesktopTrayMenuItem, DesktopUpdaterConfig, ResolvedWindowConfig } 
  */
 export interface BakedDesktopConfig {
   appName: string
-  appId: string
-  version: string
   window: ResolvedWindowConfig
   dev: {
     openDevtools: boolean
@@ -22,7 +20,11 @@ export interface BakedDesktopConfig {
     tooltip?: string
     menu?: DesktopTrayMenuItem[]
   } | false
-  updater: DesktopUpdaterConfig | false
+  /** The only updater fields the runtime consumes; the feed comes from app-update.yml */
+  updater: {
+    autoDownload?: boolean
+    autoInstallOnAppQuit?: boolean
+  } | false
   /** File name of the window icon inside the app resources directory */
   icon?: string
 }

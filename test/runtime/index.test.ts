@@ -92,8 +92,6 @@ afterAll(async () => {
 function bakedFixture(): BakedDesktopConfig {
   return {
     appName: 'runtime-test-app',
-    appId: 'desktop.uniapp.runtime-test-app',
-    version: '1.0.0',
     window: {
       title: 'Runtime Test',
       width: 420,
