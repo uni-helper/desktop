@@ -53,7 +53,7 @@ export default defineConfig({
 })
 ```
 
-其余的交给启动自检：第一次运行时自动补齐 `src/main.ts` 的垫片导入（dev 下全局 `uni` 依赖它）、把 manifest.json 的 `h5.router` 规范为 hash 路由 + `./` base（file:// 加载要求）、创建 `unh.config.ts`、追加 `dev:desktop` / `build:desktop` npm scripts；缺依赖时交互式询问安装。TTY 中逐项确认，CI（非 TTY）自动应用安全项并打印提示。
+其余的交给启动自检：把 manifest.json 的 `h5.router` 规范为 hash 路由 + `./` base（file:// 加载要求）、创建 `unh.config.ts`、追加 `dev:desktop` / `build:desktop` npm scripts；缺依赖时交互式询问安装。TTY 中逐项确认，CI（非 TTY）自动应用安全项并打印提示。垫片由 `uniDesktop` 插件直接注入页面，业务代码零改动。
 
 ### 开发
 
@@ -216,7 +216,7 @@ pages.json / manifest.json 中同样支持（`// #ifdef DESKTOP` 包裹节点，
 
 原则：**uni-h5 已经实现的 API 一律沿用原版**，桌面端与 H5 行为完全一致；只有 H5 端没有实现的 API 才由垫片桥接到 Electron 主进程。
 
-垫片在两条路径上生效：dev server 下 uni 运行时把 API 对象填进全局 `uni`，由 `src/main.ts` 首行导入的 `@uni-helper/desktop/shim` 就地打补丁；编译产物里 `uni.xxx` 调用被 uni 重写为 `@dcloudio/uni-h5` 的具名导入，由 `vite.config.ts` 里的 `uniDesktop` 插件在模块层替换导出。两条路径缺一不可。
+垫片在两条路径上生效，全部由 `uniDesktop` 插件注入，无需在业务代码里导入：dev server 下 uni 运行时把 API 对象填进全局 `uni`，插件注入页面的垫片模块就地打补丁（dev 经 `transformIndexHtml` 注入虚拟模块，build 经注入的独立 chunk）；编译产物里 `uni.xxx` 调用被 uni 重写为 `@dcloudio/uni-h5` 的具名导入，由插件在模块层替换导出。两条路径缺一不可。
 
 | API | H5 端状态 | 桌面端行为 |
 | --- | --- | --- |
@@ -269,7 +269,7 @@ createDesktopApp(__DESKTOP_CONFIG__)
 | 导入 | 说明 |
 | --- | --- |
 | `@uni-helper/desktop` | `defineConfig` 与类型 |
-| `@uni-helper/desktop/shim` | 渲染端 uni API 垫片（在 `src/main.ts` 首行导入） |
+| `@uni-helper/desktop/shim` | 渲染端 uni API 垫片（由 `uniDesktop` 插件注入页面，无需手动导入） |
 | `@uni-helper/desktop/shim/channels` | 垫片 IPC 通道契约，自定义主进程可复用 |
 | `@uni-helper/desktop/shim/apis` | 垫片 API 实现（`uniDesktop` 插件的模块替换层引用） |
 | `@uni-helper/desktop/vite` | `uniDesktop` vite 插件，在 `vite.config.ts` 中注册，驱动整个桌面平台 |

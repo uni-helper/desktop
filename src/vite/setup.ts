@@ -112,31 +112,6 @@ async function ensureManifestRouter(root: string, interactive: boolean): Promise
   logger.success('updated manifest.json (h5.router mode "hash", base "./")')
 }
 
-/**
- * The dev server resolves `uni` calls through the global object, which uni's
- * runtime keeps reassigning; the shim import at the top of `src/main.ts`
- * patches it. Compiled builds go through the vite module override instead.
- */
-async function ensureShimImport(root: string, interactive: boolean): Promise<void> {
-  const mainPath = join(root, 'src/main.ts')
-  if (!existsSync(mainPath))
-    return
-  const content = await readFile(mainPath, 'utf8')
-  if (content.includes('@uni-helper/desktop/shim'))
-    return
-
-  const message = 'Add `import \'@uni-helper/desktop/shim\'` to the top of src/main.ts? The dev shell needs it to patch the global uni.'
-  if (interactive) {
-    const answer = await clack.confirm({ message, initialValue: true })
-    if (clack.isCancel(answer) || !answer) {
-      logger.warn('skipped the shim import; uni.xxx desktop APIs will not work in the dev shell')
-      return
-    }
-  }
-  await writeFile(mainPath, `import '@uni-helper/desktop/shim'\n${content}`)
-  logger.success('added the shim import to src/main.ts')
-}
-
 async function ensureUnhConfig(root: string, appName: string): Promise<void> {
   const configPath = join(root, 'unh.config.ts')
   if (existsSync(configPath))
@@ -196,7 +171,6 @@ export async function ensureDesktopProject(
     // before any file gets rewritten.
     checkDesktopUniScript(pkg)
     await ensureManifestRouter(root, interactive)
-    await ensureShimImport(root, interactive)
     await ensureDesktopScripts(root, pkg)
     const probe = await resolveDesktopConfig(root)
     await ensureUnhConfig(root, probe.resolved.appName)

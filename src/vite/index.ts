@@ -1,4 +1,4 @@
-import type { Plugin, ViteDevServer, ResolvedConfig as ViteResolvedConfig } from 'vite'
+import type { HtmlTagDescriptor, Plugin, ViteDevServer, ResolvedConfig as ViteResolvedConfig } from 'vite'
 import type { ResolveResult } from '../config/resolve'
 import type { DesktopDevRuntimeHandle } from './driver'
 import { resolve } from 'node:path'
@@ -15,7 +15,22 @@ const UNI_H5_ID = '@dcloudio/uni-h5'
 /** Virtual module standing in for uni-h5 inside the renderer build. */
 const WRAPPER_ID = '\0uni-desktop/uni-h5'
 
+/** Virtual module that installs the desktop shim into the page. */
+const SHIM_INSTALL_ID = '\0uni-desktop/shim-install'
+
+/** The dev-server URL serving the shim virtual module (`\0` becomes `__x00__`). */
+const SHIM_INSTALL_URL = '/@id/__x00__uni-desktop/shim-install'
+
+/**
+ * Deterministic output name of the shim chunk in the built renderer. Vite
+ * injects `transformIndexHtml` tags verbatim after bundling, so the tag cannot
+ * go through module resolution: the chunk is emitted in `buildStart` under a
+ * fixed name and referenced relative to `index.html` (uni's h5 base is `./`).
+ */
+const SHIM_CHUNK = 'uni-desktop-shim.js'
+
 const DESKTOP_APIS_IMPORT = '@uni-helper/desktop/shim/apis'
+const SHIM_IMPORT = '@uni-helper/desktop/shim'
 
 /**
  * The wrapper re-exports everything uni-h5 ships, but replaces the saved-file
@@ -25,8 +40,8 @@ const DESKTOP_APIS_IMPORT = '@uni-helper/desktop/shim/apis'
  * uni's vite pipeline rewrites every `uni.xxx(...)` call in app code into
  * `import { xxx } from '@dcloudio/uni-h5'` (tree-shaken builds) or leaves it
  * as a free variable resolved on the `uni` global (dev server). The module
- * override covers the compiled path, the runtime patch in
- * `@uni-helper/desktop/shim` covers the global path.
+ * override covers the compiled path; the shim injected into the page covers
+ * the global path.
  */
 function wrapperSource(): string {
   return `export * from '${UNI_H5_ID}'
@@ -75,9 +90,10 @@ function devUrl(server: ViteDevServer, result: ResolveResult): string {
  * ```
  *
  * In a desktop build (`#ifdef DESKTOP` compiled in) the plugin also drives the
- * platform: it checks and fixes the project setup on startup, dev opens an
- * Electron window once the server listens, build assembles `dist/desktop` and
- * packs it. Other platforms are untouched.
+ * platform: it checks and fixes the project setup on startup, injects the
+ * desktop shim into the page, dev opens an Electron window once the server
+ * listens, build assembles `dist/desktop` and packs it. Other platforms are
+ * untouched.
  */
 export function uniDesktop(): Plugin {
   let root = ''
@@ -95,6 +111,8 @@ export function uniDesktop(): Plugin {
       // where the plugin sits in the user's `plugins` array.
       order: 'pre',
       async handler(source, importer, options) {
+        if (source === SHIM_INSTALL_ID)
+          return SHIM_INSTALL_ID
         if (source !== UNI_H5_ID)
           return
         // The wrapper itself must see the real uni-h5 module, not itself.
@@ -104,12 +122,31 @@ export function uniDesktop(): Plugin {
       },
     },
     load(id) {
-      if (id !== WRAPPER_ID)
-        return
-      return {
-        code: wrapperSource(),
-        map: null,
+      if (id === WRAPPER_ID) {
+        return {
+          code: wrapperSource(),
+          map: null,
+        }
       }
+      // A bare side-effect import: the shim entry installs the `window.uni`
+      // assignment interceptor, so evaluation order against uni's runtime
+      // never matters (late fills hit the interceptor).
+      if (id === SHIM_INSTALL_ID)
+        return { code: `import '${SHIM_IMPORT}'\n`, map: null }
+    },
+    /**
+     * Inject the shim module into the page; dev and build share one
+     * mechanism, only the URL differs. Without it the global `uni` path (the
+     * only path on the dev server) would go unpatched, and that requires no
+     * import in user code. A plain function hook: it must stay in the normal
+     * phase, because vite's build runs pre hooks before its script-collection
+     * traversal and would treat the injected tag as an unresolvable entry.
+     */
+    transformIndexHtml(): HtmlTagDescriptor[] | undefined {
+      if (!desktop)
+        return
+      const src = viteConfig!.command === 'serve' ? SHIM_INSTALL_URL : `./${SHIM_CHUNK}`
+      return [{ tag: 'script', attrs: { type: 'module', src }, injectTo: 'head-prepend' }]
     },
     configResolved(config) {
       root = config.root
@@ -158,6 +195,9 @@ export function uniDesktop(): Plugin {
       // Runs before any module is transformed, so manifest fixes land in the
       // same build they were detected in.
       project = await ensureDesktopProject(root)
+      // The chunk the injected script tag loads: emitted with a fixed name so
+      // `transformIndexHtml` can reference it after the module graph is sealed.
+      this.emitFile({ type: 'chunk', id: SHIM_INSTALL_ID, fileName: SHIM_CHUNK })
     },
     async closeBundle() {
       // `project` is only set for desktop builds, and vite runs configResolved

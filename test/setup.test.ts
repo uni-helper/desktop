@@ -72,18 +72,6 @@ describe('ensureDesktopProject', () => {
     expect(manifest).not.toContain('"mode": "history"')
   })
 
-  it('adds the shim import to the top of src/main.ts', async () => {
-    const root = await createProject(baseProject({
-      'src/main.ts': 'import { createSSRApp } from \'vue\'\nexport function createApp() {}\n',
-    }))
-
-    await ensureDesktopProject(root, { interactive: false })
-
-    const main = await readFile(join(root, 'src/main.ts'), 'utf8')
-    expect(main.startsWith('import \'@uni-helper/desktop/shim\'\n')).toBe(true)
-    expect(main).toContain('export function createApp()')
-  })
-
   it('creates unh.config.ts and the desktop npm scripts', async () => {
     const root = await createProject(baseProject({
       'src/manifest.json': JSON.stringify({ name: 'setup-app' }),
@@ -167,7 +155,7 @@ describe('ensureDesktopProject', () => {
 `
     const root = await createProject(baseProject({
       'src/manifest.json': manifest,
-      'src/main.ts': 'import \'@uni-helper/desktop/shim\'\nexport function createApp() {}\n',
+      'src/main.ts': 'export function createApp() {}\n',
       'unh.config.ts': 'export default {}\n',
     }))
 

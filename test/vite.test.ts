@@ -64,8 +64,8 @@ function load(instance: Plugin, id: string): any {
 }
 
 // Test double for vite's resolved config.
-function fakeViteConfig(root = '/project'): any {
-  return { root, build: { outDir: 'dist/build/h5' } }
+function fakeViteConfig(root = '/project', command: 'serve' | 'build' = 'build'): any {
+  return { root, command, build: { outDir: 'dist/build/h5' } }
 }
 
 /** A fake dev server whose httpServer reports a bound localhost address. */
@@ -150,6 +150,15 @@ describe('uniDesktop vite plugin', () => {
     const instance = plugin()
 
     expect(load(instance, '/src/main.ts')).toBeUndefined()
+  })
+
+  it('serves the shim installer virtual module as a side-effect import', async () => {
+    const instance = plugin()
+
+    expect(await resolveId(instance, {}, '\0uni-desktop/shim-install', undefined, {})).toBe('\0uni-desktop/shim-install')
+    const loaded = load(instance, '\0uni-desktop/shim-install')
+    const code = typeof loaded === 'string' ? loaded : loaded.code
+    expect(code).toContain('import \'@uni-helper/desktop/shim\'')
   })
 })
 
@@ -252,14 +261,16 @@ describe('desktop dev: configureServer drives the shell', () => {
 })
 
 describe('desktop build: buildStart checks, closeBundle assembles', () => {
-  it('checks the project and assembles the app after the build', async () => {
+  it('checks the project, emits the shim chunk and assembles the app after the build', async () => {
     const instance = plugin()
     process.env.UNI_PLATFORM = 'h5'
     process.env.UNI_CUSTOM_CONTEXT = JSON.stringify({ DESKTOP: true })
     hook(instance.configResolved!).call({} as any, fakeViteConfig())
 
-    await hook(instance.buildStart!).call({} as any, {} as any)
+    const emitFile = vi.fn()
+    await hook(instance.buildStart!).call({ emitFile } as any, {} as any)
     expect(ensureDesktopProject).toHaveBeenCalledWith('/project')
+    expect(emitFile).toHaveBeenCalledWith({ type: 'chunk', id: '\0uni-desktop/shim-install', fileName: 'uni-desktop-shim.js' })
 
     await hook(instance.closeBundle!).call({} as any)
     expect(assembleDesktopApp).toHaveBeenCalledWith(resolved, '/project/dist/build/h5')
@@ -270,10 +281,54 @@ describe('desktop build: buildStart checks, closeBundle assembles', () => {
     process.env.UNI_PLATFORM = 'h5'
     hook(instance.configResolved!).call({} as any, fakeViteConfig())
 
-    await hook(instance.buildStart!).call({} as any, {} as any)
+    const emitFile = vi.fn()
+    await hook(instance.buildStart!).call({ emitFile } as any, {} as any)
     await hook(instance.closeBundle!).call({} as any)
 
     expect(ensureDesktopProject).not.toHaveBeenCalled()
+    expect(emitFile).not.toHaveBeenCalled()
     expect(assembleDesktopApp).not.toHaveBeenCalled()
+  })
+})
+
+describe('desktop shim injection: transformIndexHtml', () => {
+  it('injects the virtual shim module ahead of the dev page', () => {
+    const instance = plugin()
+    process.env.UNI_PLATFORM = 'h5'
+    process.env.UNI_CUSTOM_CONTEXT = JSON.stringify({ DESKTOP: true })
+    hook(instance.configResolved!).call({} as any, fakeViteConfig('/project', 'serve'))
+
+    const tags = hook(instance.transformIndexHtml!).call({} as any, '<html></html>', {} as any)
+
+    expect(tags).toEqual([{
+      tag: 'script',
+      attrs: { type: 'module', src: '/@id/__x00__uni-desktop/shim-install' },
+      injectTo: 'head-prepend',
+    }])
+  })
+
+  it('injects the emitted shim chunk into the built page', () => {
+    const instance = plugin()
+    process.env.UNI_PLATFORM = 'h5'
+    process.env.UNI_CUSTOM_CONTEXT = JSON.stringify({ DESKTOP: true })
+    hook(instance.configResolved!).call({} as any, fakeViteConfig())
+
+    const tags = hook(instance.transformIndexHtml!).call({} as any, '<html></html>', {} as any)
+
+    // Build tags are injected verbatim after bundling, so the src must be the
+    // deterministic chunk file relative to index.html (uni's h5 base is `./`).
+    expect(tags).toEqual([{
+      tag: 'script',
+      attrs: { type: 'module', src: './uni-desktop-shim.js' },
+      injectTo: 'head-prepend',
+    }])
+  })
+
+  it('leaves non-desktop pages untouched', () => {
+    const instance = plugin()
+    process.env.UNI_PLATFORM = 'h5'
+    hook(instance.configResolved!).call({} as any, fakeViteConfig())
+
+    expect(hook(instance.transformIndexHtml!).call({} as any, '<html></html>', {} as any)).toBeUndefined()
   })
 })
