@@ -3,7 +3,6 @@
  */
 // #region Functions
 export function createDesktopApp(_) {}
-export function getMainWindow() {}
 export function parseDesktopFileUrl(_) {}
 export function toDesktopFileUrl(_) {}
 // #endregion

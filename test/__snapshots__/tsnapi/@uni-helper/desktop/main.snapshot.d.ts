@@ -3,7 +3,6 @@
  */
 // #region Functions
 export declare function createDesktopApp(_: BakedDesktopConfig): void;
-export declare function getMainWindow(): BrowserWindow | null;
 export declare function parseDesktopFileUrl(_: string): string;
 export declare function toDesktopFileUrl(_: string): string;
 // #endregion

@@ -149,7 +149,6 @@ export interface ResolvedConfig {
 }
 export interface ResolveResult {
   resolved: ResolvedConfig;
-  manifest: ManifestInfo | undefined;
   userConfig: DesktopConfig | undefined;
   warnings: string[];
 }

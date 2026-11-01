@@ -33,28 +33,24 @@ export function detectPackageManager(root: string): PackageManager {
   }
 }
 
-export function addCommand(pm: PackageManager, packages: string[], dev: boolean): { cmd: string, args: string[] } {
+/** Command that installs the packages as dev dependencies of the project. */
+export function addCommand(pm: PackageManager, packages: string[]): { cmd: string, args: string[] } {
   switch (pm) {
     case 'pnpm':
-      return { cmd: 'pnpm', args: ['add', dev ? '-D' : '', ...packages].filter(Boolean) }
+      return { cmd: 'pnpm', args: ['add', '-D', ...packages] }
     case 'yarn':
-      return { cmd: 'yarn', args: ['add', dev ? '-D' : '', ...packages].filter(Boolean) }
+      return { cmd: 'yarn', args: ['add', '-D', ...packages] }
     case 'bun':
-      return { cmd: 'bun', args: ['add', dev ? '-d' : '', ...packages].filter(Boolean) }
+      return { cmd: 'bun', args: ['add', '-d', ...packages] }
     default:
-      return { cmd: 'npm', args: ['install', dev ? '--save-dev' : '--save', ...packages] }
+      return { cmd: 'npm', args: ['install', '--save-dev', ...packages] }
   }
 }
 
-export interface SpawnResult {
-  code: number
-}
-
-export function spawnAwait(cmd: string, args: string[], options: { cwd: string, env?: NodeJS.ProcessEnv }): Promise<SpawnResult> {
+export function spawnAwait(cmd: string, args: string[], options: { cwd: string }): Promise<void> {
   return new Promise((resolvePromise, rejectPromise) => {
     const child = spawn(cmd, args, {
       cwd: options.cwd,
-      env: options.env ?? process.env,
       stdio: 'inherit',
       shell: process.platform === 'win32',
     })
@@ -63,7 +59,7 @@ export function spawnAwait(cmd: string, args: string[], options: { cwd: string, 
     })
     child.once('exit', (code) => {
       if (code === 0)
-        resolvePromise({ code })
+        resolvePromise()
       else
         rejectPromise(new DesktopError(`\`${cmd} ${args.join(' ')}\` exited with code ${code}`))
     })

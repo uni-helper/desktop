@@ -15,7 +15,7 @@ afterAll(async () => {
 })
 
 vi.mock('../src/orchestrate/pack', () => ({
-  packInternal: vi.fn(async () => ({ output: 'dist/release' })),
+  packInternal: vi.fn(async () => {}),
 }))
 
 beforeEach(() => {

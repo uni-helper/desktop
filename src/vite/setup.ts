@@ -169,7 +169,7 @@ async function ensureDependencies(root: string, pkg: ProjectPackage, needsPack: 
     return
   }
   const pm = detectPackageManager(root)
-  const { cmd, args } = addCommand(pm, needed, true)
+  const { cmd, args } = addCommand(pm, needed)
   logger.start(`installing ${needed.join(', ')} via ${pm}...`)
   await spawnAwait(cmd, args, { cwd: root })
 }

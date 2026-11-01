@@ -221,7 +221,6 @@ async function loadUserConfig(root: string): Promise<DesktopConfig | undefined> 
 
 export interface ResolveResult {
   resolved: ResolvedConfig
-  manifest: ManifestInfo | undefined
   userConfig: DesktopConfig | undefined
   warnings: string[]
 }
@@ -233,7 +232,7 @@ export async function resolveDesktopConfig(cwd?: string): Promise<ResolveResult>
   const userConfig = await loadUserConfig(root)
   const warnings = collectWarnings(manifest)
   const resolved = normalizeConfig(userConfig ?? {}, manifest, root, project)
-  return { resolved, manifest, userConfig, warnings }
+  return { resolved, userConfig, warnings }
 }
 
 /**

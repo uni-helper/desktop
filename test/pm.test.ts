@@ -35,10 +35,10 @@ describe('detectPackageManager', () => {
 })
 
 describe('addCommand', () => {
-  it('maps installs to package manager commands', () => {
-    expect(addCommand('pnpm', ['electron'], true)).toEqual({ cmd: 'pnpm', args: ['add', '-D', 'electron'] })
-    expect(addCommand('npm', ['electron'], true)).toEqual({ cmd: 'npm', args: ['install', '--save-dev', 'electron'] })
-    expect(addCommand('yarn', ['a', 'b'], false)).toEqual({ cmd: 'yarn', args: ['add', 'a', 'b'] })
-    expect(addCommand('bun', ['electron'], true)).toEqual({ cmd: 'bun', args: ['add', '-d', 'electron'] })
+  it('maps dev-dependency installs to package manager commands', () => {
+    expect(addCommand('pnpm', ['electron'])).toEqual({ cmd: 'pnpm', args: ['add', '-D', 'electron'] })
+    expect(addCommand('npm', ['electron'])).toEqual({ cmd: 'npm', args: ['install', '--save-dev', 'electron'] })
+    expect(addCommand('yarn', ['a', 'b'])).toEqual({ cmd: 'yarn', args: ['add', '-D', 'a', 'b'] })
+    expect(addCommand('bun', ['electron'])).toEqual({ cmd: 'bun', args: ['add', '-d', 'electron'] })
   })
 })

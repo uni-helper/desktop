@@ -25,7 +25,7 @@ const logger = createConsola({
 
 let mainWindow: BrowserWindow | null = null
 
-export function getMainWindow(): BrowserWindow | null {
+function getMainWindow(): BrowserWindow | null {
   return mainWindow
 }
 

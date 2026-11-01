@@ -9,10 +9,6 @@ import { logger } from '../log'
 import { APP_RESOURCES_DIR, appIconFileName } from '../shared/paths'
 import { detectPackageManager, spawnAwait } from './pm'
 
-export interface PackResult {
-  output: string
-}
-
 /** Read the installed electron version; electron-builder needs an exact one. */
 function resolveElectronVersion(root: string): string {
   const require = createRequire(join(root, 'package.json'))
@@ -113,8 +109,7 @@ export async function packInternal(
   root: string,
   resolved: ResolvedConfig,
   appDir: string,
-  extraArgs: string[] = [],
-): Promise<PackResult> {
+): Promise<void> {
   const electronVersion = resolveElectronVersion(root)
   const config = createElectronBuilderConfig(resolved, root, electronVersion)
   const configPath = join(appDir, 'electron-builder.json')
@@ -123,6 +118,5 @@ export async function packInternal(
   const cli = resolveElectronBuilderCli(root)
   const pm = detectPackageManager(root)
   logger.start(`running electron-builder via ${pm} (electron ${electronVersion})...`)
-  await spawnAwait(process.execPath, [cli, '--config', configPath, ...extraArgs], { cwd: appDir })
-  return { output: join(root, resolved.pack.output) }
+  await spawnAwait(process.execPath, [cli, '--config', configPath], { cwd: appDir })
 }
