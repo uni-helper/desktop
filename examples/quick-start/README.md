@@ -14,3 +14,5 @@ pnpm desktop:build         # H5 build + dist/build/desktop (installers in deskto
 ```
 
 The example depends on the workspace packages via `workspace:*`, so run it from within this repository.
+
+CI 中 `pack.autoPack` 默认关闭，只组装不打包；本地打包请改回 `true` 或删除该键。

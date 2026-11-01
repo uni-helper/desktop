@@ -12,6 +12,10 @@ export default defineConfig({
       width: 420,
       height: 760,
     },
+    // CI runs the assembly only; electron-builder runs locally via autoPack.
+    pack: {
+      autoPack: false,
+    },
     // dev: { url: 'http://localhost:5173' },
     // updater: { provider: 'generic', url: 'https://example.com/updates' },
   },

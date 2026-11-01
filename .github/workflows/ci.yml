@@ -1,4 +1,4 @@
-name: Unit Test
+name: CI
 
 on:
   push:
@@ -12,6 +12,25 @@ permissions:
 jobs:
   unit-test:
     uses: sxzz/workflows/.github/workflows/unit-test.yml@main
+
+  example-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm --filter @uni-helper/desktop-example-quick-start build:desktop
+      - name: Assert assembled artifacts
+        run: |
+          test -f examples/quick-start/dist/build/desktop/electron/main.cjs
+          test -f examples/quick-start/dist/build/desktop/web/index.html
+          test -f examples/quick-start/dist/build/desktop/resources/icon.png
+          grep -q "desktop:uni:saveFile" examples/quick-start/dist/build/desktop/electron/main.cjs
 
   # coverage:
   #   uses: sxzz/workflows/.github/workflows/coverage.yml@main
