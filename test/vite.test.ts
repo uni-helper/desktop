@@ -44,7 +44,7 @@ const ensureDesktopProject = mocks.ensureDesktopProject.mockResolvedValue({
   warnings: [],
 })
 const startDesktopDevRuntime = mocks.startDesktopDevRuntime.mockResolvedValue({ close: vi.fn(async () => {}) })
-const assembleDesktopApp = mocks.assembleDesktopApp.mockResolvedValue('/project/dist/desktop')
+const assembleDesktopApp = mocks.assembleDesktopApp.mockResolvedValue('/project/dist/build/desktop')
 
 function plugin(): Plugin {
   return uniDesktop()

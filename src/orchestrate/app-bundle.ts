@@ -6,6 +6,7 @@ import { basename, dirname, join } from 'node:path'
 import process from 'node:process'
 import { DesktopError } from '../error'
 import { logger } from '../log'
+import { DEV_APP_DIR } from '../shared/paths'
 
 export interface DevAppBundleOptions {
   /** Absolute path to the electron binary, as returned by `resolveElectronBinary` */
@@ -14,14 +15,14 @@ export interface DevAppBundleOptions {
   appId: string
   /** Absolute path to the app icon (png or icns) */
   icon: string
-  /** Project root: the patched bundle is cached under `.uni-desktop/dev-electron` */
+  /** Project root: the patched bundle is cached under `dist/dev/desktop/electron-cache` */
   root: string
   /** Ad-hoc re-sign the patched bundle; tests patch throwaway clones and skip it */
   sign?: boolean
 }
 
 /** Directory (relative to the project root) caching the patched dev Electron bundle. */
-const DEV_BUNDLE_CACHE = join('.uni-desktop', 'dev-electron')
+const DEV_BUNDLE_CACHE = join(DEV_APP_DIR, 'electron-cache')
 
 const PLIST_BUDDY = '/usr/libexec/PlistBuddy'
 const SIPS = '/usr/bin/sips'
@@ -188,7 +189,7 @@ async function bundleVersion(bundle: string): Promise<string> {
  * Prepare the Electron binary to spawn in dev. On macOS the Dock reads the app
  * name and icon from the running bundle, and the stock `Electron.app` ships
  * its own "Electron" values, so its bundle is cloned into
- * `.uni-desktop/dev-electron`, patched with the app's identity and launched
+ * `dist/dev/desktop/electron-cache`, patched with the app's identity and launched
  * from there. That also removes the default-icon flash before the runtime
  * `app.dock.setIcon` call. The clone is cached and rebuilt when the electron
  * version, app name, id or icon changes. Everything falls back to the stock

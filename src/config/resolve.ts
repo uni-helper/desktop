@@ -9,7 +9,7 @@ import process from 'node:process'
 import { loadConfig } from 'unconfig'
 import { DesktopError } from '../error'
 import { parseManifest } from '../shared/manifest'
-import { defaultIconPath } from '../shared/paths'
+import { BUILD_APP_DIR, defaultIconPath } from '../shared/paths'
 
 export type { ManifestInfo } from '../shared/manifest'
 
@@ -157,7 +157,7 @@ export function normalizeConfig(
     mainEntry: config.main?.entry,
     pack: {
       autoPack: config.pack?.autoPack ?? true,
-      output: config.pack?.output ?? 'dist/release',
+      output: config.pack?.output ?? join(BUILD_APP_DIR, 'release'),
       asar: config.pack?.asar ?? true,
       targets: config.pack?.targets ?? {},
       nsis: config.pack?.nsis,

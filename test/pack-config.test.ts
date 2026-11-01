@@ -35,7 +35,7 @@ describe('createElectronBuilderConfig', () => {
       asar: true,
       electronVersion: '45.0.0',
     })
-    expect((config as any).directories.output).toBe(join(projectRoot, 'dist/release'))
+    expect((config as any).directories.output).toBe(join(projectRoot, 'dist/build/desktop/release'))
     expect((config as any).win.target).toEqual(['nsis'])
     expect((config as any).mac.target).toEqual(['dmg'])
     // `deb` needs author email + homepage, so AppImage is the only target that

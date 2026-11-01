@@ -70,7 +70,7 @@ describe('assembleDesktopApp', () => {
 
     const outDir = await assembleDesktopApp(resolved, webDir)
 
-    expect(outDir).toBe(join(root, 'dist/desktop'))
+    expect(outDir).toBe(join(root, 'dist/build/desktop'))
     const main = await readFile(join(outDir, 'electron/main.cjs'), 'utf8')
     // The baked config must not leak build-machine paths, otherwise the tray
     // and window icons vanish once electron-builder moves the app.
@@ -95,20 +95,16 @@ describe('assembleDesktopApp', () => {
     expect(vi.mocked(await import('../src/orchestrate/pack')).packInternal).not.toHaveBeenCalled()
   })
 
-  it('keeps the web bundle in place when the build already wrote into the app dir', async () => {
-    const { root, resolved } = await projectWithWeb()
-    const webDir = join(root, 'dist/desktop/web')
-    const outDirSource = join(root, 'web')
-    await mkdir(join(root, 'dist/desktop'), { recursive: true })
-    await rm(outDirSource, { recursive: true, force: true })
-    await mkdir(webDir, { recursive: true })
-    await writeFile(join(webDir, 'index.html'), '<html>in place</html>')
+  it('moves the uni web build into the app dir instead of copying it', async () => {
+    const { root, webDir, resolved } = await projectWithWeb()
 
     await assembleDesktopApp(resolved, webDir)
 
-    // The pre-existing web bundle survives the shell assembly.
-    expect(await readFile(join(webDir, 'index.html'), 'utf8')).toContain('in place')
-    expect(existsSync(join(root, 'dist/desktop/electron/main.cjs'))).toBe(true)
+    // The web bundle was claimed wholesale: it lives in the app dir and no
+    // duplicate is left at the uni build output.
+    expect(await readFile(join(root, 'dist/build/desktop/web/index.html'), 'utf8')).toContain('desktop build')
+    expect(existsSync(webDir)).toBe(false)
+    expect(existsSync(join(root, 'dist/build/desktop/electron/main.cjs'))).toBe(true)
   })
 
   it('runs electron-builder when pack.autoPack is enabled', async () => {
@@ -118,7 +114,7 @@ describe('assembleDesktopApp', () => {
     await assembleDesktopApp(resolved, webDir)
 
     const { packInternal } = await import('../src/orchestrate/pack')
-    expect(packInternal).toHaveBeenCalledWith(root, resolved, join(root, 'dist/desktop'))
+    expect(packInternal).toHaveBeenCalledWith(root, resolved, join(root, 'dist/build/desktop'))
   })
 
   it('fails with a clear error when the uni build output is missing', async () => {

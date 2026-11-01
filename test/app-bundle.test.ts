@@ -140,9 +140,9 @@ describe.skipIf(process.platform !== 'darwin')('prepareDevAppBundle on darwin', 
     await createFakeBundle(projectRoot)
 
     const binary = await prepareDevAppBundle(devOptions(projectRoot, 'My App'))
-    expect(binary).toBe(join(projectRoot, '.uni-desktop', 'dev-electron', 'My App.app', 'Contents', 'MacOS', 'Electron'))
+    expect(binary).toBe(join(projectRoot, 'dist', 'dev', 'desktop', 'electron-cache', 'My App.app', 'Contents', 'MacOS', 'Electron'))
 
-    const marker = JSON.parse(await readFile(join(projectRoot, '.uni-desktop', 'dev-electron', 'identity.json'), 'utf8'))
+    const marker = JSON.parse(await readFile(join(projectRoot, 'dist', 'dev', 'desktop', 'electron-cache', 'identity.json'), 'utf8'))
     expect(marker).toMatchObject({ electron: '45.0.0', appName: 'My App', appId: 'desktop.uniapp.my-app' })
 
     expect(await prepareDevAppBundle(devOptions(projectRoot, 'My App'))).toBe(binary)
@@ -154,7 +154,7 @@ describe.skipIf(process.platform !== 'darwin')('prepareDevAppBundle on darwin', 
     await prepareDevAppBundle(devOptions(projectRoot, 'My App'))
 
     const renamed = await prepareDevAppBundle(devOptions(projectRoot, 'Renamed'))
-    expect(renamed).toBe(join(projectRoot, '.uni-desktop', 'dev-electron', 'Renamed.app', 'Contents', 'MacOS', 'Electron'))
+    expect(renamed).toBe(join(projectRoot, 'dist', 'dev', 'desktop', 'electron-cache', 'Renamed.app', 'Contents', 'MacOS', 'Electron'))
     await expect(readFile(renamed)).resolves.toBeTruthy()
   }, 30_000)
 })

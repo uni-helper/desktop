@@ -90,7 +90,7 @@ export interface DesktopUpdaterConfig {
 export interface DesktopPackConfig {
   /** Run electron-builder automatically after `build`, defaults to true */
   autoPack?: boolean
-  /** electron-builder output directory, defaults to `dist/release` */
+  /** electron-builder output directory, defaults to `dist/build/desktop/release` */
   output?: string
   /** Pack the app into an asar archive, defaults to true */
   asar?: boolean

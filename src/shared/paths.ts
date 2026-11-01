@@ -2,8 +2,11 @@ import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-/** Directory (relative to the project root) holding the assembled app. */
-export const APP_DIR = 'dist/desktop'
+/** Directory (relative to the project root) receiving the assembled app from a build. */
+export const BUILD_APP_DIR = 'dist/build/desktop'
+
+/** Directory (relative to the project root) holding the dev shell runtime. */
+export const DEV_APP_DIR = 'dist/dev/desktop'
 
 /** Directory (relative to the app dir) holding assets referenced by the baked config. */
 export const APP_RESOURCES_DIR = 'resources'

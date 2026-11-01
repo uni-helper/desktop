@@ -8,7 +8,7 @@
 
 ## 特性
 
-- **真平台体验**：`uni dev -p desktop` 在 dev server 就绪后自动打开 Electron 窗口（Vite 热更新、主进程改动自动重启）；`uni build -p desktop` 组装 `dist/desktop` 并用 electron-builder 生成 Windows（NSIS）/ macOS（dmg）/ Linux（AppImage）安装包
+- **真平台体验**：`uni dev -p desktop` 在 dev server 就绪后自动打开 Electron 窗口（Vite 热更新、主进程改动自动重启）；`uni build -p desktop` 组装 `dist/build/desktop` 并用 electron-builder 生成 Windows（NSIS）/ macOS（dmg）/ Linux（AppImage）安装包
 - **自定义条件编译平台**：`#ifdef DESKTOP` 覆盖 js/模板/css/pages.json/manifest.json，`#ifdef H5` 只代表浏览器构建
 - **启动自检**：首次运行自动补齐 manifest.json 路由规范、垫片导入、`unh.config.ts`、npm scripts，缺依赖时交互式安装（TTY 下逐项确认，CI 自动应用安全项）
 - **uni API 垫片**：只补 H5 端没有实现的内置 API（`uni.saveFile` / `getSavedFileList` / `getSavedFileInfo` / `removeSavedFile`），外加 `openDocument` 对 `desktop-file://` 的桥接；H5 已实现的 API 一律沿用 uni-h5 原版，纯浏览器环境整体 no-op
@@ -62,20 +62,20 @@ uni dev -p desktop          # 等价于 pnpm dev:desktop
 pnpm dev:desktop
 ```
 
-dev server 就绪后 Electron 窗口自动打开，正常使用 Vite 热更新；主进程改动自动重启窗口，渲染进程改动走 uni dev server 的 HMR。
+dev server 就绪后 Electron 窗口自动打开，正常使用 Vite 热更新；主进程改动自动重启窗口，渲染进程改动走 uni dev server 的 HMR。dev 的桌面壳运行时与其他平台一样写在 `dist/dev/desktop`（`electron/` 主进程与 preload、`resources/` 图标；macOS 的改名壳缓存在 `electron-cache/`，按 electron 版本 / 应用名 / 图标复用）。
 
 ### 构建与打包
 
 ```sh
 uni build -p desktop        # 等价于 pnpm build:desktop
-pnpm build:desktop          # H5 构建 + 组装 dist/desktop + electron-builder 打包
+pnpm build:desktop          # H5 构建 + 组装 dist/build/desktop + electron-builder 打包
 ```
 
-组装产物在 `dist/desktop`，安装包输出到 `dist/release`（可通过 `pack.output` 修改）。`pack.autoPack: false` 时只组装不出安装包。
+组装产物在 `dist/build/desktop`（uni 的 web 构建产物由 `dist/build/h5` 整体移入其中的 `web/`，成功后不残留 `h5` 目录），安装包输出到其中的 `dist/build/desktop/release`（可通过 `pack.output` 修改）。`pack.autoPack: false` 时只组装不出安装包。
 
 `electron` 的版本会从项目自身的依赖中读取并写入 electron-builder 配置（`electronVersion`），因此不必在 `package.json` 里把版本写死。Linux 的 `deb` 目标额外要求 `app.author` 与 `app.homepage`，两者默认从项目 `package.json` 的 `author` / `homepage` 读取。
 
-图标通过 `app.icon` 指定，建议提供一张 512x512 以上的 PNG；不配置时使用内置的 uni-helper 图标，因此窗口、Dock/任务栏、托盘和安装包都不会退回 Electron 的默认图标。macOS 上 dev 模式会把 Electron 的 app bundle 克隆到 `.uni-desktop/dev-electron` 并改写其中的应用名与图标（adhoc 重签后启动，按 electron 版本 / 应用名 / 图标缓存），Dock 从启动那一刻起就显示配置的应用名和图标而不是 "Electron"；克隆失败时回退为直接启动 Electron，由运行时的 `app.dock.setIcon` 兜底设置图标。
+图标通过 `app.icon` 指定，建议提供一张 512x512 以上的 PNG；不配置时使用内置的 uni-helper 图标，因此窗口、Dock/任务栏、托盘和安装包都不会退回 Electron 的默认图标。macOS 上 dev 模式会把 Electron 的 app bundle 克隆到 `dist/dev/desktop/electron-cache` 并改写其中的应用名与图标（adhoc 重签后启动，按 electron 版本 / 应用名 / 图标缓存），Dock 从启动那一刻起就显示配置的应用名和图标而不是 "Electron"；克隆失败时回退为直接启动 Electron，由运行时的 `app.dock.setIcon` 兜底设置图标。
 
 dev 模式下桌面壳由 uni 进程通过 IPC 启动，uni 进程退出时壳自动关闭，不会残留孤儿窗口。
 
@@ -135,7 +135,7 @@ export default defineConfig({
     },
     pack: {
       autoPack: true, // `uni build -p desktop` 后自动运行 electron-builder
-      output: 'dist/release',
+      output: 'dist/build/desktop/release',
       asar: true,
       targets: {
         win: ['nsis'],

@@ -92,8 +92,8 @@ function devUrl(server: ViteDevServer, result: ResolveResult): string {
  * In a desktop build (`#ifdef DESKTOP` compiled in) the plugin also drives the
  * platform: it checks and fixes the project setup on startup, injects the
  * desktop shim into the page, dev opens an Electron window once the server
- * listens, build assembles `dist/desktop` and packs it. Other platforms are
- * untouched.
+ * listens, build assembles `dist/build/desktop` and packs it. Other platforms
+ * are untouched.
  */
 export function uniDesktop(): Plugin {
   let root = ''

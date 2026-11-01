@@ -10,7 +10,7 @@ A minimal uni-app (Vue3 + Vite CLI) project demonstrating `@uni-helper/desktop`:
 ```sh
 pnpm install               # from the repo root
 pnpm desktop:dev           # inside this directory: H5 dev server + Electron window
-pnpm desktop:build         # H5 build + dist/desktop + installers in dist/release
+pnpm desktop:build         # H5 build + dist/build/desktop (installers in desktop/release)
 ```
 
 The example depends on the workspace packages via `workspace:*`, so run it from within this repository.
