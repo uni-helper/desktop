@@ -100,8 +100,12 @@ export interface DesktopPackConfig {
     mac?: string[]
     linux?: string[]
   }
+  /** Extra electron-builder `win` options (signing, requestedExecutionLevel, ...) */
+  win?: Record<string, unknown>
   /** Extra electron-builder `nsis` options */
   nsis?: Record<string, unknown>
+  /** Extra electron-builder `mac` options (identity, hardenedRuntime, notarize, ...) */
+  mac?: Record<string, unknown>
   /** Extra electron-builder `dmg` options */
   dmg?: Record<string, unknown>
   /** Extra electron-builder `linux` options */

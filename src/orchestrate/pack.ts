@@ -66,6 +66,7 @@ export function createElectronBuilderConfig(
     win: {
       target: resolved.pack.targets.win ?? ['nsis'],
       icon,
+      ...resolved.pack.win,
     },
     nsis: {
       oneClick: false,
@@ -75,6 +76,7 @@ export function createElectronBuilderConfig(
     mac: {
       target: resolved.pack.targets.mac ?? ['dmg'],
       icon,
+      ...resolved.pack.mac,
     },
     ...(resolved.pack.dmg ? { dmg: resolved.pack.dmg } : {}),
     linux: {

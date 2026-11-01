@@ -145,13 +145,15 @@ export default defineConfig({
         linux: ['AppImage'], // deb 需要 app.author / app.homepage，默认不开启
       },
       nsis: { oneClick: false },
+      win: { signingHashAlgorithms: ['sha256'] }, // electron-builder win 透传（签名等）
+      mac: { hardenedRuntime: true }, // electron-builder mac 透传（签名/公证等）
       publish: { provider: 'generic', url: 'https://example.com/updates/' },
     },
   },
 })
 ```
 
-`unh.config.ts` 由 [unconfig](https://github.com/unocss/unocss/tree/main/packages/unconfig) 加载，因此 `unh.config.{ts,mts,js,mjs,cjs,json}` 都可以使用。`desktop` 之外的顶层键会被忽略，留给其他工具消费。
+`unh.config.ts` 由 [unconfig](https://github.com/unocss/unocss/tree/main/packages/unconfig) 加载，因此 `unh.config.{ts,mts,js,mjs,cjs,json}` 都可以使用。`desktop` 之外的顶层键会被忽略，留给其他工具消费。`pack.win` / `pack.mac` 会透传给 electron-builder 的同名配置，用于签名、公证等平台选项；写在后面的用户值覆盖默认的 `target`/`icon`。
 
 `manifest.json` 由 [@uni-helper/jsonu](https://github.com/uni-helper/jsonu) 解析，支持 uni-app 的 `#ifdef` 条件编译注释，按 DESKTOP 平台求值（与编译期视图一致，见[条件编译](#条件编译)）。启动自检补全 `h5.router` 时会保留条件编译块（重写文件时普通注释会被移除，仅条件编译注释往返保留）。
 

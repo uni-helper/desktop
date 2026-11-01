@@ -57,7 +57,9 @@ describe('createElectronBuilderConfig', () => {
       pack: {
         output: 'release-out',
         targets: { win: ['zip'] },
+        win: { signingHashAlgorithms: ['sha256'] },
         nsis: { oneClick: true },
+        mac: { hardenedRuntime: true },
         dmg: { title: 'Installer' },
         linux: { category: 'Development' },
       },
@@ -66,9 +68,22 @@ describe('createElectronBuilderConfig', () => {
     expect(config.publish).toEqual({ provider: 'github' })
     expect((config as any).directories.output).toBe(join(projectRoot, 'release-out'))
     expect((config as any).win.target).toEqual(['zip'])
+    expect((config as any).win.signingHashAlgorithms).toEqual(['sha256'])
     expect((config as any).nsis).toMatchObject({ oneClick: true, allowToChangeInstallationDirectory: true })
+    expect((config as any).mac.hardenedRuntime).toBe(true)
     expect((config as any).dmg).toEqual({ title: 'Installer' })
     expect((config as any).linux.category).toBe('Development')
+  })
+
+  it('win passthrough can override the default target', () => {
+    const config = createElectronBuilderConfig(resolve({
+      pack: { win: { target: ['zip'] } },
+    }), projectRoot, electronVersion)
+
+    // The passthrough spreads after the computed keys, so explicit user values
+    // win over the `targets`-derived default.
+    expect((config as any).win.target).toEqual(['zip'])
+    expect((config as any).win.icon).toBe('resources/icon.png')
   })
 
   it('prefers explicit publish config and emits the icon when set', () => {

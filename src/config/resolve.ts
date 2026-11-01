@@ -57,7 +57,9 @@ export interface ResolvedConfig {
     output: string
     asar: boolean
     targets: { win?: string[], mac?: string[], linux?: string[] }
+    win?: Record<string, unknown>
     nsis?: Record<string, unknown>
+    mac?: Record<string, unknown>
     dmg?: Record<string, unknown>
     linux?: Record<string, unknown>
     publish?: Record<string, unknown> | Array<Record<string, unknown>>
@@ -160,7 +162,9 @@ export function normalizeConfig(
       output: config.pack?.output ?? join(BUILD_APP_DIR, 'release'),
       asar: config.pack?.asar ?? true,
       targets: config.pack?.targets ?? {},
+      win: config.pack?.win,
       nsis: config.pack?.nsis,
+      mac: config.pack?.mac,
       dmg: config.pack?.dmg,
       linux: config.pack?.linux,
       publish: config.pack?.publish,

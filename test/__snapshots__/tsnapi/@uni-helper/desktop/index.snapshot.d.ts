@@ -54,7 +54,9 @@ export interface DesktopPackConfig {
     mac?: string[];
     linux?: string[];
   };
+  win?: Record<string, unknown>;
   nsis?: Record<string, unknown>;
+  mac?: Record<string, unknown>;
   dmg?: Record<string, unknown>;
   linux?: Record<string, unknown>;
   publish?: Record<string, unknown> | Array<Record<string, unknown>>;
@@ -142,7 +144,9 @@ export interface ResolvedConfig {
       mac?: string[];
       linux?: string[];
     };
+    win?: Record<string, unknown>;
     nsis?: Record<string, unknown>;
+    mac?: Record<string, unknown>;
     dmg?: Record<string, unknown>;
     linux?: Record<string, unknown>;
     publish?: Record<string, unknown> | Array<Record<string, unknown>>;
