@@ -242,6 +242,8 @@ pages.json / manifest.json 中同样支持（`// #ifdef DESKTOP` 包裹节点，
 
 保存文件保留原始扩展名：优先取调用方传入的 `fileName`，否则按浏览器上报的 MIME 类型推导；都不已知时保存为无扩展名文件。
 
+桌面垫片对 `uni.saveFile` 设有上限：单文件 512 MB、管理目录内最多 2000 个文件，超出返回 `saveFile:fail`。
+
 ## 自动更新
 
 `updater` 配置会启用基于 electron-updater 的自动更新。若未显式配置 `pack.publish`，`updater.provider` 与 `updater.url` 会自动用作 electron-builder 的 publish 配置（生成 app-update.yml）。发布流程本身（签名、渠道、CI 上传）沿用 electron-builder 的标准做法。electron-updater 会随主进程一起打包进应用，打包产物不需要携带 node_modules。

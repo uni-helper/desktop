@@ -230,6 +230,36 @@ describe('saved-file ipc handlers', () => {
     await expect(handler({}, 'str')).rejects.toThrow()
     await expect(handler({}, [1])).rejects.toThrow()
   })
+
+  it('saveFile rejects oversized payloads', async () => {
+    await boot()
+    const handler = state.ipcHandlers.get('desktop:uni:saveFile')!
+
+    await expect(handler({}, { bytes: new Uint8Array(runtime.MAX_SAVE_BYTES + 1), mime: 'image/png' }))
+      .rejects
+      .toThrow('exceeds')
+  })
+
+  it('saveFile enforces the file count cap', async () => {
+    await boot()
+    await mkdir(savedRoot(), { recursive: true })
+    for (let index = 0; index < runtime.MAX_SAVED_FILES; index++)
+      await writeFile(join(savedRoot(), `f${index}.txt`), 'x')
+    const handler = state.ipcHandlers.get('desktop:uni:saveFile')!
+
+    await expect(handler({}, { bytes: new Uint8Array(1), mime: 'image/png' }))
+      .rejects
+      .toThrow('full')
+  })
+
+  it('saveFile still succeeds under the caps', async () => {
+    await boot()
+    const handler = state.ipcHandlers.get('desktop:uni:saveFile')!
+
+    await expect(handler({}, { bytes: new TextEncoder().encode('png-bytes'), mime: 'image/png' }))
+      .resolves
+      .toMatchObject({ savedFilePath: expect.stringMatching(/^desktop-file:\/\/f\//) })
+  })
 })
 
 describe('desktop-file protocol', () => {

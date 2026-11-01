@@ -36,6 +36,16 @@ function savedRoot(): string {
 }
 
 /**
+ * Renderer-supplied bytes are untrusted input even though only the app's own
+ * pages hold the bridge: caps bound the blast radius of a compromised renderer
+ * (main-process memory spike, userData disk fill) without touching legitimate
+ * saveFile usage. 512 MB covers any real chosen video; 2000 files covers any
+ * real app's managed files. Exported for the characterization tests.
+ */
+export const MAX_SAVE_BYTES = 512 * 1024 * 1024
+export const MAX_SAVED_FILES = 2000
+
+/**
  * Directory holding the assets baked into the app (`icon.png`,
  * `tray-icon.png`). In dev that is the assembled app directory; once packaged
  * electron-builder moves the same files into `resources/`.
@@ -132,12 +142,16 @@ function registerIpcHandlers(): void {
     const bytes = data.bytes
     if (!(bytes instanceof Uint8Array) && !(bytes instanceof ArrayBuffer))
       throw new TypeError('bytes must be a Uint8Array or ArrayBuffer')
+    if (bytes.byteLength > MAX_SAVE_BYTES)
+      throw new Error(`file exceeds the ${MAX_SAVE_BYTES} byte limit`)
     const mime = typeof data.mime === 'string' ? data.mime : undefined
     // Extension priority: an explicit fileName (renderer-side escape hatch)
     // wins; the MIME table covers the types browsers report for chosen files.
     const fileName = typeof data.fileName === 'string' ? data.fileName : undefined
     const extension = extname(fileName ?? '') || (mime ? EXTENSION_BY_MIME[mime] ?? '' : '')
     await mkdir(savedRoot(), { recursive: true })
+    if ((await readdir(savedRoot())).length >= MAX_SAVED_FILES)
+      throw new Error(`the managed file directory is full (max ${MAX_SAVED_FILES} files)`)
     const target = join(savedRoot(), `${randomUUID()}${extension}`)
     await writeFile(target, bytes instanceof ArrayBuffer ? new Uint8Array(bytes) : bytes)
     return { savedFilePath: toDesktopFileUrl(target) }

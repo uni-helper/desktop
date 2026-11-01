@@ -9,6 +9,8 @@ export declare function toDesktopFileUrl(_: string): string;
 
 // #region Variables
 export declare const DESKTOP_FILE_SCHEME: string;
+export declare const MAX_SAVE_BYTES: number;
+export declare const MAX_SAVED_FILES: number;
 // #endregion
 
 // #region Other

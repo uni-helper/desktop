@@ -9,4 +9,6 @@ export function toDesktopFileUrl(_) {}
 
 // #region Variables
 export var DESKTOP_FILE_SCHEME /* const */
+export var MAX_SAVE_BYTES /* const */
+export var MAX_SAVED_FILES /* const */
 // #endregion
