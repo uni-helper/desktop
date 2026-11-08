@@ -96,6 +96,17 @@ vi.mock('electron', async () => {
   }
 })
 
+// `electron-updater` requires the real `electron` package, whose index.js
+// downloads the binary on first require (electron 45 ships no postinstall).
+// That download alone outlives the 5s test timeout on CI, so the updater is
+// stubbed to reject: the failure path this suite cares about.
+vi.mock('electron-updater', () => ({
+  autoUpdater: {
+    on: () => {},
+    checkForUpdates: () => Promise.reject(new Error('electron-updater unavailable in tests')),
+  },
+}))
+
 let runtime: typeof import('../../src/runtime/index')
 
 beforeEach(async () => {
