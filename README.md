@@ -1,20 +1,29 @@
-<img src="./banner.svg" alt="banner" width="100%"/>
+<a href="https://github.com/uni-helper/desktop"><img src="https://cdn.jsdelivr.net/gh/uni-helper/desktop@main/banner.svg" alt="banner" width="100%"/></a>
 
-<div style="display: flex; justify-content: center; align-items: center; gap: 8px;">
-  <a href="https://github.com/uni-helper/desktop/stargazers"><img src="https://img.shields.io/github/stars/uni-helper/desktop?colorA=005947&colorB=eee&style=for-the-badge" alt="stars"></a>
-  <a href="https://www.npmjs.com/package/@uni-helper/desktop"><img src="https://img.shields.io/npm/dm/@uni-helper/desktop?colorA=005947&colorB=eee&style=for-the-badge" alt="downloads"></a>
-  <a href="https://www.npmjs.com/package/@uni-helper/desktop"><img src="https://img.shields.io/npm/v/@uni-helper/desktop?colorA=005947&colorB=eee&style=for-the-badge" alt="npm"></a>
-</div>
+# @uni-helper/desktop
 
-<div style="display: flex; justify-content: center; align-items: center; gap: 8px;">
-  <a href="https://deepwiki.com/uni-helper/desktop"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
-</div>
+<p align="center">
+  <img src="https://cdn.jsdelivr.net/gh/uni-helper/desktop@main/logo.svg" alt="logo" width="256" height="256"/>
+</p>
+
+<p align="center">
+  <a href="https://github.com/uni-helper/desktop/blob/main/LICENSE.md"><img src="https://img.shields.io/github/license/uni-helper/desktop?style=for-the-badge&labelColor=005947&color=eee" alt="License"></a>
+  <a href="https://github.com/uni-helper/desktop/stargazers"><img src="https://img.shields.io/github/stars/uni-helper/desktop?style=for-the-badge&labelColor=005947&color=eee" alt="Stars"></a>
+  <a href="https://www.npmjs.com/package/@uni-helper/desktop"><img src="https://img.shields.io/npm/v/@uni-helper/desktop?style=for-the-badge&labelColor=005947&color=eee" alt="NPM Version"></a>
+  <a href="https://www.npmjs.com/package/@uni-helper/desktop"><img src="https://img.shields.io/npm/dm/@uni-helper/desktop?style=for-the-badge&labelColor=005947&color=eee" alt="NPM Downloads"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/FliPPeDround"><img src="https://img.shields.io/badge/Author%20%26%20Maintainer-FliPPeDround-blue?style=for-the-badge" alt="Author & Maintainer"></a>
+</p>
 
 让 uni-app（Vue3 + Vite CLI 工程）直接变成桌面应用：`uni dev -p desktop` 打开 Electron 窗口，`uni build -p desktop` 产出 Windows / macOS / Linux 安装包。业务代码保持标准 `uni.xxx` 写法，跨端零改动。
 
+不想看文档？直接问 AI 🤖 <a href="https://deepwiki.com/uni-helper/desktop"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
+
 ## 快速开始
 
-**1. 安装依赖**（要求 Electron ≥ 25）
+**1. 安装依赖**（peer 要求 Electron ≥ 25、electron-builder ≥ 24、electron-updater ≥ 6，三者都是可选 peer，不装则对应能力不可用）
 
 ```sh
 pnpm add -D @uni-helper/desktop electron electron-builder electron-updater
@@ -156,22 +165,26 @@ desktopWindow.close()
 
 ### 自定义主进程
 
-默认主进程模板覆盖标准场景（窗口、托盘、更新、垫片 IPC）。需要自定义时，把 `main.entry` 指向自己的入口，通过 `createDesktopApp` 复用内置能力；也可以完全不用它，自己写 Electron 主进程。
+默认主进程模板覆盖标准场景（窗口、托盘、更新、垫片 IPC）。需要自定义时，把 `main.entry` 指向自己的入口，从 `@uni-helper/desktop/main` 导入 `createDesktopApp` 复用内置能力（它不在包根导出）；也可以完全不用它，自己写 Electron 主进程。
 
 ## 注意事项
 
 - manifest.json 必须是 hash 路由 + `./` base（首次运行自动设置），否则 file:// 加载白屏
 - `uni.saveFile` 的 `tempFilePath` 必须是当前页面仍有效的选择结果，刷新后失效
 - 保存文件单文件上限 512 MB，管理目录内最多 2000 个文件
-- dev 下 `window.wx` 与 `window.uni` 是同一对象，build 后请使用 `uni.*`
+- 垫片在 dev 下改写全局 `window.uni`，编译构建替换 uni-h5 的模块导出；业务代码统一写 `uni.xxx` 即可
 
 ## 完整示例
 
 见 [examples/quick-start](./examples/quick-start)。
 
-## License
+## 参与贡献
 
-[MIT](./LICENSE.md) License © [uni-helper](https://github.com/uni-helper)
+欢迎提交 PR，开发流程与门禁见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
+
+## 许可证
+
+[MIT](https://github.com/uni-helper/desktop/blob/main/LICENSE.md) License © [uni-helper](https://github.com/uni-helper)
 
 ## 赞助
 
