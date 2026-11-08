@@ -1,5 +1,6 @@
 import type { Plugin } from 'vite'
 import { EventEmitter } from 'node:events'
+import { resolve as resolvePath } from 'node:path'
 import process from 'node:process'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { isDesktopBuild } from '../src/vite/driver'
@@ -281,7 +282,9 @@ describe('desktop build: buildStart checks, closeBundle assembles', () => {
     expect(ensureDesktopProject).toHaveBeenCalledWith('/project')
 
     await hook(instance.closeBundle!).call({} as any)
-    expect(assembleDesktopApp).toHaveBeenCalledWith(resolved, '/project/dist/build/h5')
+    // The plugin joins root and outDir with node:path, so the expectation has
+    // to as well: the literal '/project/dist/build/h5' only holds on posix.
+    expect(assembleDesktopApp).toHaveBeenCalledWith(resolved, resolvePath('/project', 'dist/build/h5'))
   })
 
   it('does nothing for non-desktop builds', async () => {
