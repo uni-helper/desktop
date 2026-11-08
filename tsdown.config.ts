@@ -1,6 +1,14 @@
 import { defineConfig } from 'tsdown'
 import { StaleGuardRecorder } from 'tsdown-stale-guard'
 
+/**
+ * Output hashing is off: the three configs build in parallel into one `dist`,
+ * so every recorder walks a directory the other builds are still writing, and
+ * on Windows that `open()` dies with EBUSY (`dist/assets/icon.png`, seen on
+ * node 26). Source, tsdown config and lockfile hashes are still recorded.
+ */
+const staleGuard = () => StaleGuardRecorder({ hashOutputs: false })
+
 export default defineConfig([
   {
     entry: {
@@ -18,7 +26,7 @@ export default defineConfig([
     // Out dir is cleaned once per run, so one config is enough.
     copy: ['src/templates', 'src/assets'],
     plugins: [
-      StaleGuardRecorder(),
+      staleGuard(),
     ],
   },
   {
@@ -32,7 +40,7 @@ export default defineConfig([
     dts: true,
     publint: true,
     plugins: [
-      StaleGuardRecorder(),
+      staleGuard(),
     ],
   },
   {
@@ -49,7 +57,7 @@ export default defineConfig([
     dts: true,
     publint: true,
     plugins: [
-      StaleGuardRecorder(),
+      staleGuard(),
     ],
   },
 ])
