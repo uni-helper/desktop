@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 256 256">
+  <title>uni-helper/desktop logo</title>
+  <g fill="none" stroke="#2B9939" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="26" y="54" width="204" height="148" rx="20"/>
+    <path d="M 26 96 H 230"/>
+  </g>
+  <g fill="#2B9939">
+    <circle cx="56" cy="75" r="7.5"/>
+    <circle cx="82" cy="75" r="7.5"/>
+    <circle cx="108" cy="75" r="7.5"/>
+  </g>
+  <g fill="none" stroke="#2B9939" stroke-width="10" stroke-linecap="round" opacity="0.45">
+    <path d="M 56 130 H 150"/>
+    <path d="M 56 168 H 116"/>
+  </g>
+</svg>
